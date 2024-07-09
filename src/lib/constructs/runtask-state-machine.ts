@@ -44,6 +44,7 @@ export class RunTaskStateMachine extends Construct {
         updatedAt: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.Execution.StartTime')),
       },
       conditionExpression: 'attribute_not_exists(id)',
+      resultPath: sfn.JsonPath.DISCARD, // ワークフローへの入力をそのまま渡す
     });
 
     const imageDir = path.resolve(__dirname, '../../', 'app', 'ticker');
@@ -73,6 +74,10 @@ export class RunTaskStateMachine extends Construct {
       }),
       containerOverrides: [{
         containerDefinition: taskDefinition.defaultContainer!,
+        environment: [{
+          name: 'SFN_TASK_INPUT',
+          value: sfn.JsonPath.stringAt('States.JsonToString($)'),
+        }],
       }],
     });
 
@@ -109,7 +114,10 @@ export class RunTaskStateMachine extends Construct {
               resultPath: '$.error',
             }))
         .next(successState));
-    const logGroup = new logs.LogGroup(this, 'LogGroup');
+    const logGroup = new logs.LogGroup(this, 'LogGroup', {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      retention: logs.RetentionDays.ONE_WEEK,
+    });
 
     const stateMachine = new sfn.StateMachine(this, 'StateMachine', {
       definitionBody: sfn.DefinitionBody.fromChainable(definition),

@@ -33,7 +33,10 @@ export class InvokeFunctionStateMachine extends Construct {
     });
 
     const definition = sfn.Chain.start(lambdaInvoke);
-    const logGroup = new logs.LogGroup(this, 'TickerMachineLogGroup');
+    const logGroup = new logs.LogGroup(this, 'TickerMachineLogGroup', {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      retention: logs.RetentionDays.ONE_WEEK,
+    });
 
     const stateMachine = new sfn.StateMachine(this, 'StateMachine', {
       definitionBody: sfn.DefinitionBody.fromChainable(definition),

@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { NagSuppressions } from 'cdk-nag';
 import { Construct } from 'constructs';
 import { InvokeFunctionStateMachine } from './constructs/invoke-function-state-machine';
@@ -8,7 +9,8 @@ import { RunTaskStateMachine } from './constructs/runtask-state-machine';
 import { StateMachineQueue } from './constructs/state-machine-queue';
 import { StateMachineScheduler } from './constructs/state-machine-scheduler';
 
-export interface BatchArchitecturesStackProps extends cdk.StackProps { }
+export interface BatchArchitecturesStackProps extends cdk.StackProps {
+}
 
 export class BatchArchitecturesStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: BatchArchitecturesStackProps = {}) {
@@ -25,7 +27,9 @@ export class BatchArchitecturesStack extends cdk.Stack {
       },
     ]);
 
-    const vpc = new ec2.Vpc(this, 'VPC');
+    const vpc = new ec2.Vpc(this, 'VPC', {
+      natGateways: 1,
+    });
 
     const cluster = new ecs.Cluster(this, 'Cluster', {
       vpc,

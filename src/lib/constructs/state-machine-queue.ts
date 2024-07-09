@@ -1,5 +1,8 @@
+// eslint-disable-next-line import/no-extraneous-dependencies
 import * as pipes from '@aws-cdk/aws-pipes-alpha';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import * as sources from '@aws-cdk/aws-pipes-sources-alpha';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import * as targets from '@aws-cdk/aws-pipes-targets-alpha';
 import { CfnOutput } from 'aws-cdk-lib';
 // import * as logs from 'aws-cdk-lib/aws-logs';
