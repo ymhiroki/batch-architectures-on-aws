@@ -5,6 +5,7 @@ import { Construct } from 'constructs';
 
 export interface StateMachineSchedulerProps {
   readonly stateMachine: sfn.IStateMachine;
+  readonly enabled?: boolean;
 }
 
 export class StateMachineScheduler extends Construct {
@@ -12,9 +13,12 @@ export class StateMachineScheduler extends Construct {
     super(scope, id);
 
     const { stateMachine } = props;
+    // enabled は props で指定されている値を優先し、デフォルト false
+    const enabled = props.enabled ?? false;
 
     const rule = new events.Rule(this, 'Rule', {
       schedule: events.Schedule.cron({ minute: '0' }), // 毎時0分実行
+      enabled,
     });
 
     rule.addTarget(new targets.SfnStateMachine(stateMachine));

@@ -3,9 +3,9 @@ from datetime import datetime
 
 # 開始時刻を記録
 start_time = time.time()
+end_time = start_time + 60  # 1分間実行
 
-# 60 秒ループを続ける
-while time.time() - start_time < 60:
+while time.time() < end_time:
     # 現在の日時を取得
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
