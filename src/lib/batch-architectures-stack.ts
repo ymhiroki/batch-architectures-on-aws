@@ -22,6 +22,8 @@ export class BatchArchitecturesStack extends cdk.Stack {
     // Pattern 1-1: EventBridge Scheduler -> StepFunctions { -> EcsRunTask }
     const stateMachineForScheduler = new RunTaskStateMachine(this, 'RunTask', {
       cluster,
+      // set email address if you need notification.
+      // notificationEmail: 'example@example.com',
     });
     new StateMachineScheduler(this, 'EventBridgeSfn', {
       stateMachine: stateMachineForScheduler.stateMachine,

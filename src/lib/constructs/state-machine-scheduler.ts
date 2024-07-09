@@ -17,7 +17,7 @@ export class StateMachineScheduler extends Construct {
     const enabled = props.enabled ?? false;
 
     const rule = new events.Rule(this, 'Rule', {
-      schedule: events.Schedule.cron({ minute: '0' }), // 毎時0分実行
+      schedule: events.Schedule.cron({ minute: '0/5' }), // 5min毎実行
       enabled,
     });
 
