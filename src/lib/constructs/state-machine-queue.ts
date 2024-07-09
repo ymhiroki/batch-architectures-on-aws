@@ -30,14 +30,6 @@ export class StateMachineQueue extends Construct {
     });
 
     const pipeSource = new sources.SqsSource(queue);
-    // const logGroup = new logs.LogGroup(this, 'PipesLogGroup');
-    // const logDestinationConfig: pipes.LogDestinationConfig = {
-    //   parameters: {
-    //     cloudwatchLogsLogDestination: {
-    //       logGroupArn: logGroup.logGroupArn,
-    //     },
-    //   },
-    // };
     new pipes.Pipe(this, 'Pipe', {
       source: pipeSource,
       target: pipeTarget,
