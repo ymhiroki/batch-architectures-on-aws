@@ -83,7 +83,9 @@ export class RunTaskStateMachine extends Construct {
       maxAttempts: 5,
     };
 
-    const topic = new sns.Topic(this, 'Topic');
+    const topic = new sns.Topic(this, 'Topic', {
+      enforceSSL: true,
+    });
     const errorNotification = new tasks.SnsPublish(this, 'Notify', {
       topic,
       message: sfn.TaskInput.fromText('EcsRunTask has failed.'),
@@ -115,6 +117,7 @@ export class RunTaskStateMachine extends Construct {
         destination: logGroup,
         level: sfn.LogLevel.ALL,
       },
+      tracingEnabled: true,
     });
     taskDefinition.grantRun(stateMachine);
 

@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import { NagSuppressions } from 'cdk-nag';
 import { Construct } from 'constructs';
 import { InvokeFunctionStateMachine } from './constructs/invoke-function-state-machine';
 import { RunTaskStateMachine } from './constructs/runtask-state-machine';
@@ -13,10 +14,22 @@ export class BatchArchitecturesStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: BatchArchitecturesStackProps = {}) {
     super(scope, id, props);
 
+    NagSuppressions.addStackSuppressions(this, [
+      {
+        id: 'AwsSolutions-IAM4',
+        reason: 'default iam policy',
+      },
+      {
+        id: 'AwsSolutions-IAM5',
+        reason: 'default iam policy',
+      },
+    ]);
+
     const vpc = new ec2.Vpc(this, 'VPC');
 
     const cluster = new ecs.Cluster(this, 'Cluster', {
       vpc,
+      containerInsights: true,
     });
 
     // Pattern 1-1: EventBridge Scheduler -> StepFunctions { -> EcsRunTask }

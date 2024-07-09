@@ -23,6 +23,7 @@ export class StateMachineQueue extends Construct {
 
     const queue = new sqs.Queue(this, 'Queue', {
       encryption: sqs.QueueEncryption.KMS_MANAGED,
+      enforceSSL: true,
     });
 
     const pipeSource = new sources.SqsSource(queue);

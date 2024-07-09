@@ -41,6 +41,7 @@ export class InvokeFunctionStateMachine extends Construct {
         destination: logGroup,
         level: sfn.LogLevel.ALL,
       },
+      tracingEnabled: true,
     });
 
     this.stateMachine = stateMachine;
