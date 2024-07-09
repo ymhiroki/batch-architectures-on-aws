@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
-
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as assets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as logs from 'aws-cdk-lib/aws-logs';
@@ -13,6 +13,11 @@ import { Construct } from 'constructs';
 export interface RunTaskStateMachineProps {
   readonly cluster: ecs.ICluster;
   readonly notificationEmail?: string;
+  /**
+   * @description 呼び出し元に適した排他制御に使うパラメーターを指定する。SQS なら $[0].messageId など
+   * @default '$.id'
+   */
+  readonly mutexKeyExpression?: string;
 }
 
 export class RunTaskStateMachine extends Construct {
@@ -22,6 +27,24 @@ export class RunTaskStateMachine extends Construct {
     super(scope, id);
 
     const cluster = props.cluster;
+
+    const table = new dynamodb.Table(this, 'Table', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+    });
+
+    const mutexKeyExpression = props.mutexKeyExpression ?? '$.id';
+
+    const conditionalWriteTask = new tasks.DynamoPutItem(this, 'PutItem', {
+      table,
+      item: {
+        id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt(`${mutexKeyExpression}`)),
+        updatedAt: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt('$$.Execution.StartTime')),
+      },
+      conditionExpression: 'attribute_not_exists(id)',
+    });
 
     const imageDir = path.resolve(__dirname, '../../', 'app', 'ticker');
     const image = ecs.ContainerImage.fromAsset(imageDir, {
@@ -71,12 +94,19 @@ export class RunTaskStateMachine extends Construct {
       topic.addSubscription(new subscriptions.EmailSubscription(props.notificationEmail));
     }
 
+    const successState = new sfn.Succeed(this, 'Success');
+    const failState = new sfn.Fail(this, 'Fail');
+
     const definition = sfn.Chain.start(
-      runTask
-        .addRetry(retryProps)
-        .addCatch(errorNotification, {
-          resultPath: '$.error',
-        }));
+      conditionalWriteTask
+        .addCatch(failState)
+        .next(
+          runTask
+            .addRetry(retryProps)
+            .addCatch(errorNotification.next(failState), {
+              resultPath: '$.error',
+            }))
+        .next(successState));
     const logGroup = new logs.LogGroup(this, 'LogGroup');
 
     const stateMachine = new sfn.StateMachine(this, 'StateMachine', {

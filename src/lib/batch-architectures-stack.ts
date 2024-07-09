@@ -32,6 +32,7 @@ export class BatchArchitecturesStack extends cdk.Stack {
     // Pattern 2-1: SQS -> EventBridge Pipes -> StepFunctions { -> EcsRunTask }
     const stateMachineForQueue = new RunTaskStateMachine(this, 'Queue', {
       cluster,
+      mutexKeyExpression: '$[0].messageId',
     });
     new StateMachineQueue(this, 'SfnQueue', {
       stateMachine: stateMachineForQueue.stateMachine,
