@@ -25,6 +25,21 @@
   resolved "https://registry.yarnpkg.com/@aws-cdk/asset-node-proxy-agent-v6/-/asset-node-proxy-agent-v6-2.0.3.tgz#9b5d213b5ce5ad4461f6a4720195ff8de72e6523"
   integrity sha512-twhuEG+JPOYCYPx/xy5uH2+VUsIEhPTzDY0F1KuB+ocjWWB/KEDiOVL19nHvbPCB6fhWnkykXEMJ4HHcKvjtvg==
 
+"@aws-cdk/aws-pipes-alpha@^2.148.0-alpha.0":
+  version "2.148.0-alpha.0"
+  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-pipes-alpha/-/aws-pipes-alpha-2.148.0-alpha.0.tgz#ecba7ed57b2450a69ed0dc6524221404fed5a46b"
+  integrity sha512-xb0Xr2kzSFLupifl9fPCF2B9lueThmcdmDj+R/9I5sFOdM2CiSuihr+fAMjIhdTOhn0l3ZSVFgJbrgQ33puMKg==
+
+"@aws-cdk/aws-pipes-sources-alpha@^2.148.0-alpha.0":
+  version "2.148.0-alpha.0"
+  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-pipes-sources-alpha/-/aws-pipes-sources-alpha-2.148.0-alpha.0.tgz#5f528dcfac373b6d7ea00d2dcc4fba5ea020c20c"
+  integrity sha512-SnGo49z6l09KP+70YyWsEOfnTEkunde5VeFCdDlplH/72NQ/7vFoK9siU/B/5EMcSCF8dVyfhSXhot1ZvHLQOw==
+
+"@aws-cdk/aws-pipes-targets-alpha@^2.148.0-alpha.0":
+  version "2.148.0-alpha.0"
+  resolved "https://registry.yarnpkg.com/@aws-cdk/aws-pipes-targets-alpha/-/aws-pipes-targets-alpha-2.148.0-alpha.0.tgz#a4d52a56333b3de9dbdf9267fc3c2e884f13233f"
+  integrity sha512-fJ0UAxo/BqIqrk26KCISKSA8pMax2ViLHlXidFMXYEWAKfQoWcPPkb0pHLkOwK/1i/QWhrhhaBYPFSNMUtMAcg==
+
 "@babel/code-frame@^7.0.0", "@babel/code-frame@^7.12.13", "@babel/code-frame@^7.24.7":
   version "7.24.7"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.24.7.tgz#882fd9e09e8ee324e496bd040401c6f046ef4465"

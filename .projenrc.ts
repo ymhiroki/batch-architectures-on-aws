@@ -6,7 +6,7 @@ const project = new awscdk.AwsCdkTypeScriptApp({
   name: 'batch-architectures-on-aws',
   projenrcTs: true,
 
-  // deps: [],                /* Runtime dependencies of this module. */
+  deps: ['@aws-cdk/aws-pipes-alpha', '@aws-cdk/aws-pipes-sources-alpha', '@aws-cdk/aws-pipes-targets-alpha'], /* Runtime dependencies of this module. */
   // description: undefined,  /* The description is just a string that helps people understand the purpose of the package. */
   // devDeps: [],             /* Build dependencies for this module. */
   // packageName: undefined,  /* The "name" in package.json. */

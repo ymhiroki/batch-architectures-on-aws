@@ -67,6 +67,18 @@
       "type": "build"
     },
     {
+      "name": "@aws-cdk/aws-pipes-alpha",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-cdk/aws-pipes-sources-alpha",
+      "type": "runtime"
+    },
+    {
+      "name": "@aws-cdk/aws-pipes-targets-alpha",
+      "type": "runtime"
+    },
+    {
       "name": "aws-cdk-lib",
       "version": "^2.1.0",
       "type": "runtime"

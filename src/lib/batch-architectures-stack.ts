@@ -1,11 +1,10 @@
-import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as assets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
-import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
+import { RunTaskStateMachine } from './constructs/runtask-state-machine';
+import { StateMachineQueue } from './constructs/state-machine-queue';
+import { StateMachineScheduler } from './constructs/state-machine-scheduler';
 
 export interface BatchArchitecturesStackProps extends cdk.StackProps { }
 
@@ -19,41 +18,18 @@ export class BatchArchitecturesStack extends cdk.Stack {
       vpc,
     });
 
-    const imageDir = path.resolve(__dirname, '..', 'app', 'ticker');
-    const image = ecs.ContainerImage.fromAsset(imageDir, {
-      platform: assets.Platform.LINUX_AMD64,
-    });
-
-    const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
-      cpu: 256,
-      memoryLimitMiB: 512,
-    });
-
-    taskDefinition.addContainer('TickerContainer', {
-      image,
-      logging: ecs.AwsLogDriver.awsLogs({
-        streamPrefix: 'TickerContainer',
-        mode: ecs.AwsLogDriverMode.BLOCKING,
-      }),
-    });
-
-    const runTask = new tasks.EcsRunTask(this, 'RunTask', {
+    const stateMachineForScheduler = new RunTaskStateMachine(this, 'RunTask', {
       cluster,
-      taskDefinition,
-      integrationPattern: sfn.IntegrationPattern.RUN_JOB,
-      launchTarget: new tasks.EcsFargateLaunchTarget({
-        platformVersion: ecs.FargatePlatformVersion.LATEST,
-      }),
-      containerOverrides: [{
-        containerDefinition: taskDefinition.defaultContainer!,
-      }],
+    });
+    new StateMachineScheduler(this, 'EventBridgeSfn', {
+      stateMachine: stateMachineForScheduler.stateMachine,
     });
 
-    const stateMachine = new sfn.StateMachine(this, 'StateMachine', {
-      definitionBody: sfn.DefinitionBody.fromChainable(
-        runTask,
-      ),
+    const stateMachineForQueue = new RunTaskStateMachine(this, 'Queue', {
+      cluster,
     });
-    taskDefinition.grantRun(stateMachine);
+    new StateMachineQueue(this, 'SfnQueue', {
+      stateMachine: stateMachineForQueue.stateMachine,
+    });
   }
 }
