@@ -1,5 +1,6 @@
 import { awscdk } from 'projen';
 const project = new awscdk.AwsCdkTypeScriptApp({
+  appEntrypoint: 'cdk.ts',
   cdkVersion: '2.1.0',
   defaultReleaseBranch: 'main',
   name: 'batch-architectures-on-aws',
