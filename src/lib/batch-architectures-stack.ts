@@ -16,6 +16,11 @@ import { StateMachineScheduler } from './constructs/state-machine-scheduler';
 
 export interface BatchArchitecturesStackProps extends cdk.StackProps {
   readonly vpc?: ec2.IVpc;
+  /**
+   * @description バッチ処理のタイムアウト時間
+   * @default 1時間
+   */
+  readonly taskTimeout?: cdk.Duration;
 }
 
 export class BatchArchitecturesStack extends cdk.Stack {
@@ -38,6 +43,11 @@ export class BatchArchitecturesStack extends cdk.Stack {
       new ec2.Vpc(this, 'VPC', {
         natGateways: 1,
       });
+
+    const taskTimeout = sfn.Timeout.duration(
+      props.taskTimeout ??
+      cdk.Duration.hours(1),
+    );
 
     const cluster = new ecs.Cluster(this, 'Cluster', {
       vpc,
@@ -80,6 +90,7 @@ export class BatchArchitecturesStack extends cdk.Stack {
               value: sfn.JsonPath.stringAt('States.JsonToString($)'),
             }],
           }],
+          taskTimeout,
         }),
       }).stateMachine,
     });
@@ -105,6 +116,7 @@ export class BatchArchitecturesStack extends cdk.Stack {
         mutexKeyExpression: '$[0].messageId',
       }).stateMachine,
     });
+    // TODO: exit code の確認
 
     // LambdaInvoke で起動するLambda 関数の作成
     const lambdaImageDir = path.resolve(__dirname, '../', 'app', 'ticker-lambda');
@@ -122,6 +134,7 @@ export class BatchArchitecturesStack extends cdk.Stack {
         task: new tasks.LambdaInvoke(this, 'SchedulerFunction', {
           lambdaFunction: tickerFunction,
           payloadResponseOnly: true,
+          taskTimeout,
         }),
       }).stateMachine,
     });
@@ -132,6 +145,7 @@ export class BatchArchitecturesStack extends cdk.Stack {
         task: new tasks.LambdaInvoke(this, 'QueueFunction', {
           lambdaFunction: tickerFunction,
           payloadResponseOnly: true,
+          taskTimeout,
         }),
         mutexKeyExpression: '$[0].messageId',
       }).stateMachine,

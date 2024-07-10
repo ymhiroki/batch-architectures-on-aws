@@ -746,7 +746,7 @@ exports[`Snapshot 1`] = `
               {
                 "Ref": "QueueLambdaWorkflowTableC48DD743",
               },
-              "","ConditionExpression":"attribute_not_exists(id)"}},"QueueFunction":{"Next":"Success","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","Resource":"",
+              "","ConditionExpression":"attribute_not_exists(id)"}},"QueueFunction":{"Next":"Success","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","TimeoutSeconds":3600,"Resource":"",
               {
                 "Fn::GetAtt": [
                   "TickerFunctions4DCC7C63",
@@ -1102,7 +1102,7 @@ exports[`Snapshot 1`] = `
               {
                 "Ref": "SchedulerEcsWorkflowTable269D7A6C",
               },
-              "","ConditionExpression":"attribute_not_exists(id)"}},"SchedulerTask":{"Next":"Success","Retry":[{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","Resource":"arn:",
+              "","ConditionExpression":"attribute_not_exists(id)"}},"SchedulerTask":{"Next":"Success","Retry":[{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","TimeoutSeconds":3600,"Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -1643,7 +1643,7 @@ exports[`Snapshot 1`] = `
               {
                 "Ref": "SchedulerLambdaWorkflowTable9445E525",
               },
-              "","ConditionExpression":"attribute_not_exists(id)"}},"SchedulerFunction":{"Next":"Success","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","Resource":"",
+              "","ConditionExpression":"attribute_not_exists(id)"}},"SchedulerFunction":{"Next":"Success","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","TimeoutSeconds":3600,"Resource":"",
               {
                 "Fn::GetAtt": [
                   "TickerFunctions4DCC7C63",
