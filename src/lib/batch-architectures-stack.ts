@@ -116,7 +116,7 @@ export class BatchArchitecturesStack extends cdk.Stack {
         mutexKeyExpression: '$[0].messageId',
       }).stateMachine,
     });
-    // TODO: exit code の確認
+    // TODO: exit code の確認, $.Containers[0].ExitCode で取得できるはず
 
     // LambdaInvoke で起動するLambda 関数の作成
     const lambdaImageDir = path.resolve(__dirname, '../', 'app', 'ticker-lambda');
