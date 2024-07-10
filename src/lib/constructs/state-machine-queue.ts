@@ -14,6 +14,9 @@ export interface StateMachineQueueProps {
   readonly stateMachine: sfn.IStateMachine;
 }
 
+/**
+ * @description StateMachine を入力し、SQS へのキューイングを契機に起動する設定を追加
+ */
 export class StateMachineQueue extends Construct {
   constructor(scope: Construct, id: string, props: StateMachineQueueProps) {
     super(scope, id);

@@ -8,6 +8,9 @@ export interface StateMachineSchedulerProps {
   readonly enabled?: boolean;
 }
 
+/**
+ * @description StateMachine を入力し、EventBridge Scheduler を契機に起動する設定を追加
+ */
 export class StateMachineScheduler extends Construct {
   constructor(scope: Construct, id: string, props: StateMachineSchedulerProps) {
     super(scope, id);

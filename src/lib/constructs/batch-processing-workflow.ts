@@ -17,6 +17,9 @@ export interface BatchProcessingWorkflowProps {
   readonly mutexKeyExpression?: string;
 }
 
+/**
+ * @description 実行環境 (EcsRunTask or LambdaInvoke) を入力し、排他制御・エラー処理を追加する
+ */
 export class BatchProcessingWorkflow extends Construct {
   public readonly stateMachine: sfn.StateMachine;
 
@@ -33,7 +36,7 @@ export class BatchProcessingWorkflow extends Construct {
     const mutexKeyExpression = props.mutexKeyExpression ?? '$.id';
 
     const conditionalWriteTask = new tasks.DynamoPutItem(this, `PutItem/${id}`, {
-      stateName: 'PutItem',
+      stateName: 'Execution Control',
       table,
       item: {
         id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt(`${mutexKeyExpression}`)),

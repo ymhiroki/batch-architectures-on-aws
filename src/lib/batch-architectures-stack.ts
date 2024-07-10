@@ -44,6 +44,7 @@ export class BatchArchitecturesStack extends cdk.Stack {
       containerInsights: true,
     });
 
+    // EcsRunTask で起動するコンテナの設定
     const ecsImageDir = path.resolve(__dirname, '../', 'app', 'ticker');
     const image = ecs.ContainerImage.fromAsset(ecsImageDir, {
       platform: assets.Platform.LINUX_AMD64,
@@ -105,7 +106,7 @@ export class BatchArchitecturesStack extends cdk.Stack {
       }).stateMachine,
     });
 
-    // Lambda 関数の作成
+    // LambdaInvoke で起動するLambda 関数の作成
     const lambdaImageDir = path.resolve(__dirname, '../', 'app', 'ticker-lambda');
     const tickerFunction = new lambda.DockerImageFunction(this, 'TickerFunctions', {
       code: lambda.DockerImageCode.fromImageAsset(lambdaImageDir, {

@@ -237,7 +237,7 @@ exports[`Snapshot 1`] = `
           "Fn::Join": [
             "",
             [
-              "{"StartAt":"PutItem","States":{"PutItem":{"Next":"QueueTask","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
+              "{"StartAt":"Execution Control","States":{"Execution Control":{"Next":"QueueTask","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -738,7 +738,7 @@ exports[`Snapshot 1`] = `
           "Fn::Join": [
             "",
             [
-              "{"StartAt":"PutItem","States":{"PutItem":{"Next":"QueueFunction","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
+              "{"StartAt":"Execution Control","States":{"Execution Control":{"Next":"QueueFunction","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -1094,7 +1094,7 @@ exports[`Snapshot 1`] = `
           "Fn::Join": [
             "",
             [
-              "{"StartAt":"PutItem","States":{"PutItem":{"Next":"SchedulerTask","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
+              "{"StartAt":"Execution Control","States":{"Execution Control":{"Next":"SchedulerTask","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
@@ -1635,7 +1635,7 @@ exports[`Snapshot 1`] = `
           "Fn::Join": [
             "",
             [
-              "{"StartAt":"PutItem","States":{"PutItem":{"Next":"SchedulerFunction","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
+              "{"StartAt":"Execution Control","States":{"Execution Control":{"Next":"SchedulerFunction","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
               {
                 "Ref": "AWS::Partition",
               },
