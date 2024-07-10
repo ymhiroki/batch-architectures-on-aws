@@ -4,13 +4,13 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as assets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { NagSuppressions } from 'cdk-nag';
 import { Construct } from 'constructs';
 // import { InvokeFunctionStateMachine } from './constructs/invoke-function-state-machine';
 import { BatchProcessingStateMachine } from './constructs/batch-processing-state-machine';
-import { RunTaskStateMachine } from './constructs/runtask-state-machine';
 import { StateMachineQueue } from './constructs/state-machine-queue';
 import { StateMachineScheduler } from './constructs/state-machine-scheduler';
 
@@ -41,23 +41,66 @@ export class BatchArchitecturesStack extends cdk.Stack {
       containerInsights: true,
     });
 
-    // Pattern 1-1: EventBridge Scheduler -> StepFunctions { -> EcsRunTask }
-    const stateMachineForScheduler = new RunTaskStateMachine(this, 'RunTask', {
-      cluster,
-      // set email address if you need notification.
-      // notificationEmail: 'example@example.com',
+
+    const ecsImageDir = path.resolve(__dirname, '../', 'app', 'ticker');
+    const image = ecs.ContainerImage.fromAsset(ecsImageDir, {
+      platform: assets.Platform.LINUX_AMD64,
     });
-    new StateMachineScheduler(this, 'EventBridgeSfn', {
-      stateMachine: stateMachineForScheduler.stateMachine,
+
+    const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
+      cpu: 256,
+      memoryLimitMiB: 512,
+    });
+
+    taskDefinition.addContainer('TickerContainer', {
+      image,
+      logging: ecs.AwsLogDriver.awsLogs({
+        streamPrefix: 'TickerContainer',
+        mode: ecs.AwsLogDriverMode.BLOCKING,
+      }),
+    });
+
+    // Pattern 1-1: EventBridge Scheduler -> StepFunctions { -> EcsRunTask }
+    new StateMachineScheduler(this, 'Scheduler', {
+      stateMachine: new BatchProcessingStateMachine(this, 'BatchProcessing', {
+        task: new tasks.EcsRunTask(this, 'RunTaskScheduler', {
+          cluster,
+          taskDefinition,
+          integrationPattern: sfn.IntegrationPattern.RUN_JOB,
+          launchTarget: new tasks.EcsFargateLaunchTarget({
+            platformVersion: ecs.FargatePlatformVersion.LATEST,
+          }),
+          containerOverrides: [{
+            containerDefinition: taskDefinition.defaultContainer!,
+            environment: [{
+              name: 'SFN_TASK_INPUT',
+              value: sfn.JsonPath.stringAt('States.JsonToString($)'),
+            }],
+          }],
+        }),
+      }).stateMachine,
     });
 
     // Pattern 2-1: SQS -> EventBridge Pipes -> StepFunctions { -> EcsRunTask }
-    const stateMachineForQueue = new RunTaskStateMachine(this, 'Queue', {
-      cluster,
-      mutexKeyExpression: '$[0].messageId',
-    });
-    new StateMachineQueue(this, 'SfnQueue', {
-      stateMachine: stateMachineForQueue.stateMachine,
+    new StateMachineQueue(this, 'Queue', {
+      stateMachine: new BatchProcessingStateMachine(this, 'BatchProcessing2', {
+        task: new tasks.EcsRunTask(this, 'RunTaskQueue', {
+          cluster,
+          taskDefinition,
+          integrationPattern: sfn.IntegrationPattern.RUN_JOB,
+          launchTarget: new tasks.EcsFargateLaunchTarget({
+            platformVersion: ecs.FargatePlatformVersion.LATEST,
+          }),
+          containerOverrides: [{
+            containerDefinition: taskDefinition.defaultContainer!,
+            environment: [{
+              name: 'SFN_TASK_INPUT',
+              value: sfn.JsonPath.stringAt('States.JsonToString($)'),
+            }],
+          }],
+        }),
+        mutexKeyExpression: '$[0].messageId',
+      }).stateMachine,
     });
 
     // Lambda 関数の作成
@@ -82,7 +125,7 @@ export class BatchArchitecturesStack extends cdk.Stack {
 
     // Patter 2-2: SQS -> EventBridge Pipes -> StepFunctions { -> InvokeLambda }
     new StateMachineQueue(this, 'SfnQueue2', {
-      stateMachine: new BatchProcessingStateMachine(this, 'BatchProcessing', {
+      stateMachine: new BatchProcessingStateMachine(this, 'BatchProcessingForQueue', {
         task: new tasks.LambdaInvoke(this, 'lambdaInvokeForQueue', {
           lambdaFunction: tickerFunction,
           payloadResponseOnly: true,
