@@ -35,6 +35,8 @@ export class BatchProcessingWorkflow extends Construct {
 
     const mutexKeyExpression = props.mutexKeyExpression ?? '$.id';
 
+    // at least once な呼び出し機構に対応するため、Dynamo DB で排他制御
+    // 簡単のため PutItem を使っているが、起動要件によって Lambda を挟むことも選択肢となる
     const conditionalWriteTask = new tasks.DynamoPutItem(this, `PutItem/${id}`, {
       stateName: 'Execution Control',
       table,

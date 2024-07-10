@@ -19,6 +19,8 @@ export class StateMachineScheduler extends Construct {
     // enabled は props で指定されている値を優先し、デフォルト false
     const enabled = props.enabled ?? false;
 
+    // at least once の起動であることに注意する
+    // exactly once が必要な場合は One-time schedules を利用する (https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html#one-time)
     const rule = new events.Rule(this, 'Rule', {
       schedule: events.Schedule.cron({ minute: '0/5' }), // 5min毎実行
       enabled,
