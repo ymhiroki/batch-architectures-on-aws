@@ -3,6 +3,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as assets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as events from 'aws-cdk-lib/aws-events';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
@@ -21,6 +22,12 @@ export interface BatchArchitecturesStackProps extends cdk.StackProps {
    * @default 1時間
    */
   readonly taskTimeout?: cdk.Duration;
+  /**
+   * @description バッチ処理の起動頻度
+   * @default 5分毎
+   */
+  readonly schedule?: events.Schedule;
+  readonly scheduleEnabled?: boolean;
 }
 
 export class BatchArchitecturesStack extends cdk.Stack {
@@ -48,6 +55,15 @@ export class BatchArchitecturesStack extends cdk.Stack {
       props.taskTimeout ??
       cdk.Duration.hours(1),
     );
+
+    const schedule =
+      props.schedule ??
+      events.Schedule.cron({ minute: '0/5' });
+
+    // enabled は props で指定されている値を優先し、デフォルト false
+    const scheduleEnabled =
+      props.scheduleEnabled ??
+      false;
 
     const cluster = new ecs.Cluster(this, 'Cluster', {
       vpc,
@@ -93,6 +109,8 @@ export class BatchArchitecturesStack extends cdk.Stack {
           taskTimeout,
         }),
       }).stateMachine,
+      schedule,
+      scheduleEnabled,
     });
 
     // Pattern 2-1: SQS -> EventBridge Pipes -> StepFunctions { -> EcsRunTask }
@@ -137,6 +155,8 @@ export class BatchArchitecturesStack extends cdk.Stack {
           taskTimeout,
         }),
       }).stateMachine,
+      schedule,
+      scheduleEnabled,
     });
 
     // Patter 2-2: SQS -> EventBridge Pipes -> StepFunctions { -> InvokeLambda }

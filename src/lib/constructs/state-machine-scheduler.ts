@@ -5,7 +5,8 @@ import { Construct } from 'constructs';
 
 export interface StateMachineSchedulerProps {
   readonly stateMachine: sfn.IStateMachine;
-  readonly enabled?: boolean;
+  readonly schedule: events.Schedule;
+  readonly scheduleEnabled: boolean;
 }
 
 /**
@@ -15,15 +16,13 @@ export class StateMachineScheduler extends Construct {
   constructor(scope: Construct, id: string, props: StateMachineSchedulerProps) {
     super(scope, id);
 
-    const { stateMachine } = props;
-    // enabled は props で指定されている値を優先し、デフォルト false
-    const enabled = props.enabled ?? false;
+    const { stateMachine, schedule, scheduleEnabled } = props;
 
     // at least once の起動であることに注意する
     // exactly once が必要な場合は One-time schedules を利用する (https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html#one-time)
     const rule = new events.Rule(this, 'Rule', {
-      schedule: events.Schedule.cron({ minute: '0/5' }), // 5min毎実行
-      enabled,
+      schedule: schedule, // 5min毎実行
+      enabled: scheduleEnabled,
     });
 
     rule.addTarget(new targets.SfnStateMachine(stateMachine));
