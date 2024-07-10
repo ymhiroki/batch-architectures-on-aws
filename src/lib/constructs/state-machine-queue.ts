@@ -36,7 +36,7 @@ export class StateMachineQueue extends Construct {
       logLevel: pipes.LogLevel.INFO,
     });
 
-    new CfnOutput(this, 'QueueArn', {
+    new CfnOutput(this, 'SendMessageCommand', {
       value: `aws sqs send-message --queue-url ${queue.queueUrl} --message-body "Hello World"`,
     });
   }

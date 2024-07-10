@@ -10,11 +10,12 @@ import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { NagSuppressions } from 'cdk-nag';
 import { Construct } from 'constructs';
 // import { InvokeFunctionStateMachine } from './constructs/invoke-function-state-machine';
-import { BatchProcessingStateMachine } from './constructs/batch-processing-state-machine';
+import { BatchProcessingWorkflow } from './constructs/batch-processing-workflow';
 import { StateMachineQueue } from './constructs/state-machine-queue';
 import { StateMachineScheduler } from './constructs/state-machine-scheduler';
 
 export interface BatchArchitecturesStackProps extends cdk.StackProps {
+  readonly vpc?: ec2.IVpc;
 }
 
 export class BatchArchitecturesStack extends cdk.Stack {
@@ -32,15 +33,16 @@ export class BatchArchitecturesStack extends cdk.Stack {
       },
     ]);
 
-    const vpc = new ec2.Vpc(this, 'VPC', {
-      natGateways: 1,
-    });
+    const vpc =
+      props.vpc ??
+      new ec2.Vpc(this, 'VPC', {
+        natGateways: 1,
+      });
 
     const cluster = new ecs.Cluster(this, 'Cluster', {
       vpc,
       containerInsights: true,
     });
-
 
     const ecsImageDir = path.resolve(__dirname, '../', 'app', 'ticker');
     const image = ecs.ContainerImage.fromAsset(ecsImageDir, {
@@ -62,8 +64,8 @@ export class BatchArchitecturesStack extends cdk.Stack {
 
     // Pattern 1-1: EventBridge Scheduler -> StepFunctions { -> EcsRunTask }
     new StateMachineScheduler(this, 'Scheduler', {
-      stateMachine: new BatchProcessingStateMachine(this, 'BatchProcessing', {
-        task: new tasks.EcsRunTask(this, 'RunTaskScheduler', {
+      stateMachine: new BatchProcessingWorkflow(this, 'SchedulerEcsWorkflow', {
+        task: new tasks.EcsRunTask(this, 'SchedulerTask', {
           cluster,
           taskDefinition,
           integrationPattern: sfn.IntegrationPattern.RUN_JOB,
@@ -83,8 +85,8 @@ export class BatchArchitecturesStack extends cdk.Stack {
 
     // Pattern 2-1: SQS -> EventBridge Pipes -> StepFunctions { -> EcsRunTask }
     new StateMachineQueue(this, 'Queue', {
-      stateMachine: new BatchProcessingStateMachine(this, 'BatchProcessing2', {
-        task: new tasks.EcsRunTask(this, 'RunTaskQueue', {
+      stateMachine: new BatchProcessingWorkflow(this, 'QueueEcsWorkflow', {
+        task: new tasks.EcsRunTask(this, 'QueueTask', {
           cluster,
           taskDefinition,
           integrationPattern: sfn.IntegrationPattern.RUN_JOB,
@@ -115,8 +117,8 @@ export class BatchArchitecturesStack extends cdk.Stack {
 
     // Pattern 1-2: EventBridge Scheduler -> StepFunctions { -> InvokeLambda }
     new StateMachineScheduler(this, 'EventBridgeSfn2', {
-      stateMachine: new BatchProcessingStateMachine(this, 'BatchProcessingForScheduler', {
-        task: new tasks.LambdaInvoke(this, 'lambdaInvokeForScheduler', {
+      stateMachine: new BatchProcessingWorkflow(this, 'SchedulerLambdaWorkflow', {
+        task: new tasks.LambdaInvoke(this, 'SchedulerFunction', {
           lambdaFunction: tickerFunction,
           payloadResponseOnly: true,
         }),
@@ -125,8 +127,8 @@ export class BatchArchitecturesStack extends cdk.Stack {
 
     // Patter 2-2: SQS -> EventBridge Pipes -> StepFunctions { -> InvokeLambda }
     new StateMachineQueue(this, 'SfnQueue2', {
-      stateMachine: new BatchProcessingStateMachine(this, 'BatchProcessingForQueue', {
-        task: new tasks.LambdaInvoke(this, 'lambdaInvokeForQueue', {
+      stateMachine: new BatchProcessingWorkflow(this, 'QueueLambdaWorkflow', {
+        task: new tasks.LambdaInvoke(this, 'QueueFunction', {
           lambdaFunction: tickerFunction,
           payloadResponseOnly: true,
         }),

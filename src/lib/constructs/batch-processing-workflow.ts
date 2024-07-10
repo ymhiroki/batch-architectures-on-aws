@@ -1,8 +1,5 @@
-import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as assets from 'aws-cdk-lib/aws-ecr-assets';
-import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
@@ -10,8 +7,8 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import { Construct } from 'constructs';
 
-export interface RunTaskStateMachineProps {
-  readonly cluster: ecs.ICluster;
+export interface BatchProcessingWorkflowProps {
+  readonly task: tasks.EcsRunTask | tasks.LambdaInvoke;
   readonly notificationEmail?: string;
   /**
    * @description 呼び出し元に適した排他制御に使うパラメーターを指定する。SQS なら $[0].messageId など
@@ -20,13 +17,11 @@ export interface RunTaskStateMachineProps {
   readonly mutexKeyExpression?: string;
 }
 
-export class RunTaskStateMachine extends Construct {
+export class BatchProcessingWorkflow extends Construct {
   public readonly stateMachine: sfn.StateMachine;
 
-  constructor(scope: Construct, id: string, props: RunTaskStateMachineProps) {
+  constructor(scope: Construct, id: string, props: BatchProcessingWorkflowProps) {
     super(scope, id);
-
-    const cluster = props.cluster;
 
     const table = new dynamodb.Table(this, 'Table', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
@@ -37,7 +32,8 @@ export class RunTaskStateMachine extends Construct {
 
     const mutexKeyExpression = props.mutexKeyExpression ?? '$.id';
 
-    const conditionalWriteTask = new tasks.DynamoPutItem(this, 'PutItem', {
+    const conditionalWriteTask = new tasks.DynamoPutItem(this, `PutItem/${id}`, {
+      stateName: 'PutItem',
       table,
       item: {
         id: tasks.DynamoAttributeValue.fromString(sfn.JsonPath.stringAt(`${mutexKeyExpression}`)),
@@ -45,40 +41,6 @@ export class RunTaskStateMachine extends Construct {
       },
       conditionExpression: 'attribute_not_exists(id)',
       resultPath: sfn.JsonPath.DISCARD, // ワークフローへの入力をそのまま渡す
-    });
-
-    const imageDir = path.resolve(__dirname, '../../', 'app', 'ticker');
-    const image = ecs.ContainerImage.fromAsset(imageDir, {
-      platform: assets.Platform.LINUX_AMD64,
-    });
-
-    const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
-      cpu: 256,
-      memoryLimitMiB: 512,
-    });
-
-    taskDefinition.addContainer('TickerContainer', {
-      image,
-      logging: ecs.AwsLogDriver.awsLogs({
-        streamPrefix: 'TickerContainer',
-        mode: ecs.AwsLogDriverMode.BLOCKING,
-      }),
-    });
-
-    const runTask = new tasks.EcsRunTask(this, 'RunTask', {
-      cluster,
-      taskDefinition,
-      integrationPattern: sfn.IntegrationPattern.RUN_JOB,
-      launchTarget: new tasks.EcsFargateLaunchTarget({
-        platformVersion: ecs.FargatePlatformVersion.LATEST,
-      }),
-      containerOverrides: [{
-        containerDefinition: taskDefinition.defaultContainer!,
-        environment: [{
-          name: 'SFN_TASK_INPUT',
-          value: sfn.JsonPath.stringAt('States.JsonToString($)'),
-        }],
-      }],
     });
 
     const retryProps: sfn.RetryProps = {
@@ -91,9 +53,10 @@ export class RunTaskStateMachine extends Construct {
     const topic = new sns.Topic(this, 'Topic', {
       enforceSSL: true,
     });
-    const errorNotification = new tasks.SnsPublish(this, 'Notify', {
+    const errorNotification = new tasks.SnsPublish(this, `Notify/${id}`, {
+      stateName: 'Notify',
       topic,
-      message: sfn.TaskInput.fromText('EcsRunTask has failed.'),
+      message: sfn.TaskInput.fromText('task has failed.'),
     });
 
     // 通知先の指定
@@ -108,7 +71,7 @@ export class RunTaskStateMachine extends Construct {
       conditionalWriteTask
         .addCatch(failState)
         .next(
-          runTask
+          props.task
             .addRetry(retryProps)
             .addCatch(errorNotification.next(failState), {
               resultPath: '$.error',
@@ -127,7 +90,6 @@ export class RunTaskStateMachine extends Construct {
       },
       tracingEnabled: true,
     });
-    taskDefinition.grantRun(stateMachine);
 
     this.stateMachine = stateMachine;
   }

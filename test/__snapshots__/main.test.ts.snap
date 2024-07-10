@@ -141,14 +141,28 @@ exports[`Snapshot 1`] = `
     },
   },
   "Outputs": {
-    "SfnQueueQueueArn9C4480C2": {
+    "QueueSendMessageCommandE50F272D": {
       "Value": {
         "Fn::Join": [
           "",
           [
             "aws sqs send-message --queue-url ",
             {
-              "Ref": "SfnQueueDEC51299",
+              "Ref": "Queue381943A6",
+            },
+            " --message-body "Hello World"",
+          ],
+        ],
+      },
+    },
+    "SfnQueue2SendMessageCommand421EF6A6": {
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "aws sqs send-message --queue-url ",
+            {
+              "Ref": "SfnQueue2Queue969EFB50",
             },
             " --message-body "Hello World"",
           ],
@@ -182,12 +196,12 @@ exports[`Snapshot 1`] = `
         "Targets": [
           {
             "Arn": {
-              "Ref": "InvokeStateMachine336516AA",
+              "Ref": "SchedulerLambdaWorkflowStateMachineCBA0F67C",
             },
             "Id": "Target0",
             "RoleArn": {
               "Fn::GetAtt": [
-                "InvokeStateMachineEventsRoleFE5C8C54",
+                "SchedulerLambdaWorkflowStateMachineEventsRole0E78A336",
                 "Arn",
               ],
             },
@@ -196,46 +210,76 @@ exports[`Snapshot 1`] = `
       },
       "Type": "AWS::Events::Rule",
     },
-    "EventBridgeSfnRuleB3CA763B": {
+    "Queue381943A6": {
+      "DeletionPolicy": "Delete",
       "Properties": {
-        "ScheduleExpression": "cron(0/5 * * * ? *)",
-        "State": "DISABLED",
-        "Targets": [
-          {
-            "Arn": {
-              "Ref": "RunTaskStateMachine4F0C783C",
-            },
-            "Id": "Target0",
-            "RoleArn": {
-              "Fn::GetAtt": [
-                "RunTaskStateMachineEventsRole404AAB78",
-                "Arn",
-              ],
-            },
-          },
-        ],
+        "KmsMasterKeyId": "alias/aws/sqs",
       },
-      "Type": "AWS::Events::Rule",
+      "Type": "AWS::SQS::Queue",
+      "UpdateReplacePolicy": "Delete",
     },
-    "InvokeStateMachine336516AA": {
+    "QueueEcsWorkflowLogGroupBA258F1B": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "RetentionInDays": 7,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "QueueEcsWorkflowStateMachineE8828B3A": {
       "DeletionPolicy": "Delete",
       "DependsOn": [
-        "InvokeStateMachineRoleDefaultPolicyB6970B5F",
-        "InvokeStateMachineRoleEEF06654",
+        "QueueEcsWorkflowStateMachineRoleDefaultPolicy3C3F9CBF",
+        "QueueEcsWorkflowStateMachineRoleCB725D32",
       ],
       "Properties": {
         "DefinitionString": {
           "Fn::Join": [
             "",
             [
-              "{"StartAt":"lambdaInvoke","States":{"lambdaInvoke":{"End":true,"Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2}],"Type":"Task","Resource":"",
+              "{"StartAt":"PutItem","States":{"PutItem":{"Next":"QueueTask","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::dynamodb:putItem","Parameters":{"Item":{"id":{"S.$":"$[0].messageId"},"updatedAt":{"S.$":"$$.Execution.StartTime"}},"TableName":"",
+              {
+                "Ref": "QueueEcsWorkflowTableBF29AA34",
+              },
+              "","ConditionExpression":"attribute_not_exists(id)"}},"QueueTask":{"Next":"Success","Retry":[{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::ecs:runTask.sync","Parameters":{"Cluster":"",
               {
                 "Fn::GetAtt": [
-                  "InvokeTickerFunctions85DE624B",
+                  "ClusterEB0386A7",
                   "Arn",
                 ],
               },
-              ""}}}",
+              "","TaskDefinition":"testTaskDefinitionDEFD2B54","NetworkConfiguration":{"AwsvpcConfiguration":{"Subnets":["",
+              {
+                "Ref": "VPCPrivateSubnet1Subnet8BCA10E0",
+              },
+              "","",
+              {
+                "Ref": "VPCPrivateSubnet2SubnetCFCDAA7A",
+              },
+              ""],"SecurityGroups":["",
+              {
+                "Fn::GetAtt": [
+                  "QueueTaskSecurityGroupD85E02F4",
+                  "GroupId",
+                ],
+              },
+              ""]}},"Overrides":{"ContainerOverrides":[{"Name":"TickerContainer","Environment":[{"Name":"SFN_TASK_INPUT","Value.$":"States.JsonToString($)"}]}]},"LaunchType":"FARGATE","PlatformVersion":"LATEST"}},"Success":{"Type":"Succeed"},"Notify":{"Next":"Fail","Type":"Task","Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::sns:publish","Parameters":{"TopicArn":"",
+              {
+                "Ref": "QueueEcsWorkflowTopic65484EEF",
+              },
+              "","Message":"task has failed."}},"Fail":{"Type":"Fail"}}}",
             ],
           ],
         },
@@ -245,7 +289,7 @@ exports[`Snapshot 1`] = `
               "CloudWatchLogsLogGroup": {
                 "LogGroupArn": {
                   "Fn::GetAtt": [
-                    "InvokeTickerMachineLogGroup50DD406E",
+                    "QueueEcsWorkflowLogGroupBA258F1B",
                     "Arn",
                   ],
                 },
@@ -256,7 +300,7 @@ exports[`Snapshot 1`] = `
         },
         "RoleArn": {
           "Fn::GetAtt": [
-            "InvokeStateMachineRoleEEF06654",
+            "QueueEcsWorkflowStateMachineRoleCB725D32",
             "Arn",
           ],
         },
@@ -267,30 +311,7 @@ exports[`Snapshot 1`] = `
       "Type": "AWS::StepFunctions::StateMachine",
       "UpdateReplacePolicy": "Delete",
     },
-    "InvokeStateMachineEventsRoleDefaultPolicy14A9138A": {
-      "Properties": {
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Action": "states:StartExecution",
-              "Effect": "Allow",
-              "Resource": {
-                "Ref": "InvokeStateMachine336516AA",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "InvokeStateMachineEventsRoleDefaultPolicy14A9138A",
-        "Roles": [
-          {
-            "Ref": "InvokeStateMachineEventsRoleFE5C8C54",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
-    },
-    "InvokeStateMachineEventsRoleFE5C8C54": {
+    "QueueEcsWorkflowStateMachineRoleCB725D32": {
       "Properties": {
         "AssumeRolePolicyDocument": {
           "Statement": [
@@ -298,7 +319,15 @@ exports[`Snapshot 1`] = `
               "Action": "sts:AssumeRole",
               "Effect": "Allow",
               "Principal": {
-                "Service": "events.amazonaws.com",
+                "Service": {
+                  "Fn::FindInMap": [
+                    "ServiceprincipalMap",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    "states",
+                  ],
+                },
               },
             },
           ],
@@ -307,28 +336,258 @@ exports[`Snapshot 1`] = `
       },
       "Type": "AWS::IAM::Role",
     },
-    "InvokeStateMachineRoleDefaultPolicyB6970B5F": {
+    "QueueEcsWorkflowStateMachineRoleDefaultPolicy3C3F9CBF": {
       "Properties": {
         "PolicyDocument": {
           "Statement": [
             {
-              "Action": "lambda:InvokeFunction",
+              "Action": "dynamodb:PutItem",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":dynamodb:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":table/",
+                    {
+                      "Ref": "QueueEcsWorkflowTableBF29AA34",
+                    },
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "ecs:RunTask",
               "Effect": "Allow",
               "Resource": [
                 {
-                  "Fn::GetAtt": [
-                    "InvokeTickerFunctions85DE624B",
-                    "Arn",
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Fn::Select": [
+                          1,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          2,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          3,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          4,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          0,
+                          {
+                            "Fn::Split": [
+                              "/",
+                              {
+                                "Fn::Select": [
+                                  5,
+                                  {
+                                    "Fn::Split": [
+                                      ":",
+                                      {
+                                        "Ref": "TaskDefinitionB36D86D9",
+                                      },
+                                    ],
+                                  },
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "/",
+                      {
+                        "Fn::Select": [
+                          1,
+                          {
+                            "Fn::Split": [
+                              "/",
+                              {
+                                "Fn::Select": [
+                                  5,
+                                  {
+                                    "Fn::Split": [
+                                      ":",
+                                      {
+                                        "Ref": "TaskDefinitionB36D86D9",
+                                      },
+                                    ],
+                                  },
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
                   ],
                 },
                 {
                   "Fn::Join": [
                     "",
                     [
+                      "arn:",
                       {
-                        "Fn::GetAtt": [
-                          "InvokeTickerFunctions85DE624B",
-                          "Arn",
+                        "Fn::Select": [
+                          1,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          2,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          3,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          4,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          0,
+                          {
+                            "Fn::Split": [
+                              "/",
+                              {
+                                "Fn::Select": [
+                                  5,
+                                  {
+                                    "Fn::Split": [
+                                      ":",
+                                      {
+                                        "Ref": "TaskDefinitionB36D86D9",
+                                      },
+                                    ],
+                                  },
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "/",
+                      {
+                        "Fn::Select": [
+                          1,
+                          {
+                            "Fn::Split": [
+                              "/",
+                              {
+                                "Fn::Select": [
+                                  5,
+                                  {
+                                    "Fn::Split": [
+                                      ":",
+                                      {
+                                        "Ref": "TaskDefinitionB36D86D9",
+                                      },
+                                    ],
+                                  },
+                                ],
+                              },
+                            ],
+                          },
                         ],
                       },
                       ":*",
@@ -336,6 +595,67 @@ exports[`Snapshot 1`] = `
                   ],
                 },
               ],
+            },
+            {
+              "Action": [
+                "ecs:StopTask",
+                "ecs:DescribeTasks",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": "iam:PassRole",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "TaskDefinitionTaskRoleFD40A61D",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::GetAtt": [
+                    "TaskDefinitionExecutionRole8D61C2FB",
+                    "Arn",
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": [
+                "events:PutTargets",
+                "events:PutRule",
+                "events:DescribeRule",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":events:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":rule/StepFunctionsGetEventsForECSTaskRule",
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "sns:Publish",
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "QueueEcsWorkflowTopic65484EEF",
+              },
             },
             {
               "Action": [
@@ -364,16 +684,116 @@ exports[`Snapshot 1`] = `
           ],
           "Version": "2012-10-17",
         },
-        "PolicyName": "InvokeStateMachineRoleDefaultPolicyB6970B5F",
+        "PolicyName": "QueueEcsWorkflowStateMachineRoleDefaultPolicy3C3F9CBF",
         "Roles": [
           {
-            "Ref": "InvokeStateMachineRoleEEF06654",
+            "Ref": "QueueEcsWorkflowStateMachineRoleCB725D32",
           },
         ],
       },
       "Type": "AWS::IAM::Policy",
     },
-    "InvokeStateMachineRoleEEF06654": {
+    "QueueEcsWorkflowTableBF29AA34": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "id",
+            "AttributeType": "S",
+          },
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "KeySchema": [
+          {
+            "AttributeName": "id",
+            "KeyType": "HASH",
+          },
+        ],
+        "SSESpecification": {
+          "SSEEnabled": true,
+        },
+      },
+      "Type": "AWS::DynamoDB::Table",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "QueueEcsWorkflowTopic65484EEF": {
+      "Type": "AWS::SNS::Topic",
+    },
+    "QueueLambdaWorkflowLogGroupF48EAF7A": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "RetentionInDays": 7,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "QueueLambdaWorkflowStateMachineFE9FE154": {
+      "DeletionPolicy": "Delete",
+      "DependsOn": [
+        "QueueLambdaWorkflowStateMachineRoleDefaultPolicy0D665EDE",
+        "QueueLambdaWorkflowStateMachineRole97618FCD",
+      ],
+      "Properties": {
+        "DefinitionString": {
+          "Fn::Join": [
+            "",
+            [
+              "{"StartAt":"PutItem","States":{"PutItem":{"Next":"QueueFunction","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::dynamodb:putItem","Parameters":{"Item":{"id":{"S.$":"$[0].messageId"},"updatedAt":{"S.$":"$$.Execution.StartTime"}},"TableName":"",
+              {
+                "Ref": "QueueLambdaWorkflowTableC48DD743",
+              },
+              "","ConditionExpression":"attribute_not_exists(id)"}},"QueueFunction":{"Next":"Success","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","Resource":"",
+              {
+                "Fn::GetAtt": [
+                  "TickerFunctions4DCC7C63",
+                  "Arn",
+                ],
+              },
+              ""},"Success":{"Type":"Succeed"},"Notify":{"Next":"Fail","Type":"Task","Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::sns:publish","Parameters":{"TopicArn":"",
+              {
+                "Ref": "QueueLambdaWorkflowTopic2D4CC8D5",
+              },
+              "","Message":"task has failed."}},"Fail":{"Type":"Fail"}}}",
+            ],
+          ],
+        },
+        "LoggingConfiguration": {
+          "Destinations": [
+            {
+              "CloudWatchLogsLogGroup": {
+                "LogGroupArn": {
+                  "Fn::GetAtt": [
+                    "QueueLambdaWorkflowLogGroupF48EAF7A",
+                    "Arn",
+                  ],
+                },
+              },
+            },
+          ],
+          "Level": "ALL",
+        },
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "QueueLambdaWorkflowStateMachineRole97618FCD",
+            "Arn",
+          ],
+        },
+        "TracingConfiguration": {
+          "Enabled": true,
+        },
+      },
+      "Type": "AWS::StepFunctions::StateMachine",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "QueueLambdaWorkflowStateMachineRole97618FCD": {
       "Properties": {
         "AssumeRolePolicyDocument": {
           "Statement": [
@@ -398,9 +818,1382 @@ exports[`Snapshot 1`] = `
       },
       "Type": "AWS::IAM::Role",
     },
-    "InvokeTickerFunctions85DE624B": {
+    "QueueLambdaWorkflowStateMachineRoleDefaultPolicy0D665EDE": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "dynamodb:PutItem",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":dynamodb:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":table/",
+                    {
+                      "Ref": "QueueLambdaWorkflowTableC48DD743",
+                    },
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "lambda:InvokeFunction",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "TickerFunctions4DCC7C63",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "TickerFunctions4DCC7C63",
+                          "Arn",
+                        ],
+                      },
+                      ":*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": "sns:Publish",
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "QueueLambdaWorkflowTopic2D4CC8D5",
+              },
+            },
+            {
+              "Action": [
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "xray:PutTraceSegments",
+                "xray:PutTelemetryRecords",
+                "xray:GetSamplingRules",
+                "xray:GetSamplingTargets",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "QueueLambdaWorkflowStateMachineRoleDefaultPolicy0D665EDE",
+        "Roles": [
+          {
+            "Ref": "QueueLambdaWorkflowStateMachineRole97618FCD",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "QueueLambdaWorkflowTableC48DD743": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "id",
+            "AttributeType": "S",
+          },
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "KeySchema": [
+          {
+            "AttributeName": "id",
+            "KeyType": "HASH",
+          },
+        ],
+        "SSESpecification": {
+          "SSEEnabled": true,
+        },
+      },
+      "Type": "AWS::DynamoDB::Table",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "QueueLambdaWorkflowTopic2D4CC8D5": {
+      "Type": "AWS::SNS::Topic",
+    },
+    "QueuePipe24FF2CAE": {
+      "Properties": {
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "QueuePipeRole804061BD",
+            "Arn",
+          ],
+        },
+        "Source": {
+          "Fn::GetAtt": [
+            "Queue381943A6",
+            "Arn",
+          ],
+        },
+        "SourceParameters": {},
+        "Target": {
+          "Ref": "QueueEcsWorkflowStateMachineE8828B3A",
+        },
+        "TargetParameters": {
+          "StepFunctionStateMachineParameters": {
+            "InvocationType": "FIRE_AND_FORGET",
+          },
+        },
+      },
+      "Type": "AWS::Pipes::Pipe",
+    },
+    "QueuePipeRole804061BD": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "pipes.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "QueuePipeRoleDefaultPolicyACDCBF93": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:ChangeMessageVisibility",
+                "sqs:GetQueueUrl",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "Queue381943A6",
+                  "Arn",
+                ],
+              },
+            },
+            {
+              "Action": "states:StartExecution",
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "QueueEcsWorkflowStateMachineE8828B3A",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "QueuePipeRoleDefaultPolicyACDCBF93",
+        "Roles": [
+          {
+            "Ref": "QueuePipeRole804061BD",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "QueuePolicyDB5CAAD1": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sqs:*",
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false",
+                },
+              },
+              "Effect": "Deny",
+              "Principal": {
+                "AWS": "*",
+              },
+              "Resource": {
+                "Fn::GetAtt": [
+                  "Queue381943A6",
+                  "Arn",
+                ],
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "Queues": [
+          {
+            "Ref": "Queue381943A6",
+          },
+        ],
+      },
+      "Type": "AWS::SQS::QueuePolicy",
+    },
+    "QueueTaskSecurityGroupD85E02F4": {
+      "Properties": {
+        "GroupDescription": "test/QueueTask/SecurityGroup",
+        "SecurityGroupEgress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "VPCB9E5F0B4",
+        },
+      },
+      "Type": "AWS::EC2::SecurityGroup",
+    },
+    "SchedulerEcsWorkflowLogGroupE2EC8231": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "RetentionInDays": 7,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "SchedulerEcsWorkflowStateMachine56BA9AA6": {
+      "DeletionPolicy": "Delete",
       "DependsOn": [
-        "InvokeTickerFunctionsServiceRole83BD0595",
+        "SchedulerEcsWorkflowStateMachineRoleDefaultPolicy433ACDA1",
+        "SchedulerEcsWorkflowStateMachineRole7AD122DD",
+      ],
+      "Properties": {
+        "DefinitionString": {
+          "Fn::Join": [
+            "",
+            [
+              "{"StartAt":"PutItem","States":{"PutItem":{"Next":"SchedulerTask","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::dynamodb:putItem","Parameters":{"Item":{"id":{"S.$":"$.id"},"updatedAt":{"S.$":"$$.Execution.StartTime"}},"TableName":"",
+              {
+                "Ref": "SchedulerEcsWorkflowTable269D7A6C",
+              },
+              "","ConditionExpression":"attribute_not_exists(id)"}},"SchedulerTask":{"Next":"Success","Retry":[{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::ecs:runTask.sync","Parameters":{"Cluster":"",
+              {
+                "Fn::GetAtt": [
+                  "ClusterEB0386A7",
+                  "Arn",
+                ],
+              },
+              "","TaskDefinition":"testTaskDefinitionDEFD2B54","NetworkConfiguration":{"AwsvpcConfiguration":{"Subnets":["",
+              {
+                "Ref": "VPCPrivateSubnet1Subnet8BCA10E0",
+              },
+              "","",
+              {
+                "Ref": "VPCPrivateSubnet2SubnetCFCDAA7A",
+              },
+              ""],"SecurityGroups":["",
+              {
+                "Fn::GetAtt": [
+                  "SchedulerTaskSecurityGroup88DC2692",
+                  "GroupId",
+                ],
+              },
+              ""]}},"Overrides":{"ContainerOverrides":[{"Name":"TickerContainer","Environment":[{"Name":"SFN_TASK_INPUT","Value.$":"States.JsonToString($)"}]}]},"LaunchType":"FARGATE","PlatformVersion":"LATEST"}},"Success":{"Type":"Succeed"},"Notify":{"Next":"Fail","Type":"Task","Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::sns:publish","Parameters":{"TopicArn":"",
+              {
+                "Ref": "SchedulerEcsWorkflowTopic823B9ABE",
+              },
+              "","Message":"task has failed."}},"Fail":{"Type":"Fail"}}}",
+            ],
+          ],
+        },
+        "LoggingConfiguration": {
+          "Destinations": [
+            {
+              "CloudWatchLogsLogGroup": {
+                "LogGroupArn": {
+                  "Fn::GetAtt": [
+                    "SchedulerEcsWorkflowLogGroupE2EC8231",
+                    "Arn",
+                  ],
+                },
+              },
+            },
+          ],
+          "Level": "ALL",
+        },
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "SchedulerEcsWorkflowStateMachineRole7AD122DD",
+            "Arn",
+          ],
+        },
+        "TracingConfiguration": {
+          "Enabled": true,
+        },
+      },
+      "Type": "AWS::StepFunctions::StateMachine",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "SchedulerEcsWorkflowStateMachineEventsRole5EF68391": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "events.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "SchedulerEcsWorkflowStateMachineEventsRoleDefaultPolicy1E513BF1": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "states:StartExecution",
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "SchedulerEcsWorkflowStateMachine56BA9AA6",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "SchedulerEcsWorkflowStateMachineEventsRoleDefaultPolicy1E513BF1",
+        "Roles": [
+          {
+            "Ref": "SchedulerEcsWorkflowStateMachineEventsRole5EF68391",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "SchedulerEcsWorkflowStateMachineRole7AD122DD": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": {
+                  "Fn::FindInMap": [
+                    "ServiceprincipalMap",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    "states",
+                  ],
+                },
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "SchedulerEcsWorkflowStateMachineRoleDefaultPolicy433ACDA1": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "dynamodb:PutItem",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":dynamodb:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":table/",
+                    {
+                      "Ref": "SchedulerEcsWorkflowTable269D7A6C",
+                    },
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "ecs:RunTask",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Fn::Select": [
+                          1,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          2,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          3,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          4,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          0,
+                          {
+                            "Fn::Split": [
+                              "/",
+                              {
+                                "Fn::Select": [
+                                  5,
+                                  {
+                                    "Fn::Split": [
+                                      ":",
+                                      {
+                                        "Ref": "TaskDefinitionB36D86D9",
+                                      },
+                                    ],
+                                  },
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "/",
+                      {
+                        "Fn::Select": [
+                          1,
+                          {
+                            "Fn::Split": [
+                              "/",
+                              {
+                                "Fn::Select": [
+                                  5,
+                                  {
+                                    "Fn::Split": [
+                                      ":",
+                                      {
+                                        "Ref": "TaskDefinitionB36D86D9",
+                                      },
+                                    ],
+                                  },
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    ],
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Fn::Select": [
+                          1,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          2,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          3,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          4,
+                          {
+                            "Fn::Split": [
+                              ":",
+                              {
+                                "Ref": "TaskDefinitionB36D86D9",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":",
+                      {
+                        "Fn::Select": [
+                          0,
+                          {
+                            "Fn::Split": [
+                              "/",
+                              {
+                                "Fn::Select": [
+                                  5,
+                                  {
+                                    "Fn::Split": [
+                                      ":",
+                                      {
+                                        "Ref": "TaskDefinitionB36D86D9",
+                                      },
+                                    ],
+                                  },
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      "/",
+                      {
+                        "Fn::Select": [
+                          1,
+                          {
+                            "Fn::Split": [
+                              "/",
+                              {
+                                "Fn::Select": [
+                                  5,
+                                  {
+                                    "Fn::Split": [
+                                      ":",
+                                      {
+                                        "Ref": "TaskDefinitionB36D86D9",
+                                      },
+                                    ],
+                                  },
+                                ],
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      ":*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": [
+                "ecs:StopTask",
+                "ecs:DescribeTasks",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": "iam:PassRole",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "TaskDefinitionTaskRoleFD40A61D",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::GetAtt": [
+                    "TaskDefinitionExecutionRole8D61C2FB",
+                    "Arn",
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": [
+                "events:PutTargets",
+                "events:PutRule",
+                "events:DescribeRule",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":events:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":rule/StepFunctionsGetEventsForECSTaskRule",
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "sns:Publish",
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "SchedulerEcsWorkflowTopic823B9ABE",
+              },
+            },
+            {
+              "Action": [
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "xray:PutTraceSegments",
+                "xray:PutTelemetryRecords",
+                "xray:GetSamplingRules",
+                "xray:GetSamplingTargets",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "SchedulerEcsWorkflowStateMachineRoleDefaultPolicy433ACDA1",
+        "Roles": [
+          {
+            "Ref": "SchedulerEcsWorkflowStateMachineRole7AD122DD",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "SchedulerEcsWorkflowTable269D7A6C": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "id",
+            "AttributeType": "S",
+          },
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "KeySchema": [
+          {
+            "AttributeName": "id",
+            "KeyType": "HASH",
+          },
+        ],
+        "SSESpecification": {
+          "SSEEnabled": true,
+        },
+      },
+      "Type": "AWS::DynamoDB::Table",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "SchedulerEcsWorkflowTopic823B9ABE": {
+      "Type": "AWS::SNS::Topic",
+    },
+    "SchedulerLambdaWorkflowLogGroup38DE7869": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "RetentionInDays": 7,
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "SchedulerLambdaWorkflowStateMachineCBA0F67C": {
+      "DeletionPolicy": "Delete",
+      "DependsOn": [
+        "SchedulerLambdaWorkflowStateMachineRoleDefaultPolicy1D655EDF",
+        "SchedulerLambdaWorkflowStateMachineRoleE7936EE1",
+      ],
+      "Properties": {
+        "DefinitionString": {
+          "Fn::Join": [
+            "",
+            [
+              "{"StartAt":"PutItem","States":{"PutItem":{"Next":"SchedulerFunction","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::dynamodb:putItem","Parameters":{"Item":{"id":{"S.$":"$.id"},"updatedAt":{"S.$":"$$.Execution.StartTime"}},"TableName":"",
+              {
+                "Ref": "SchedulerLambdaWorkflowTable9445E525",
+              },
+              "","ConditionExpression":"attribute_not_exists(id)"}},"SchedulerFunction":{"Next":"Success","Retry":[{"ErrorEquals":["Lambda.ClientExecutionTimeoutException","Lambda.ServiceException","Lambda.AWSLambdaException","Lambda.SdkClientException"],"IntervalSeconds":2,"MaxAttempts":6,"BackoffRate":2},{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","Resource":"",
+              {
+                "Fn::GetAtt": [
+                  "TickerFunctions4DCC7C63",
+                  "Arn",
+                ],
+              },
+              ""},"Success":{"Type":"Succeed"},"Notify":{"Next":"Fail","Type":"Task","Resource":"arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":states:::sns:publish","Parameters":{"TopicArn":"",
+              {
+                "Ref": "SchedulerLambdaWorkflowTopicE6B123DB",
+              },
+              "","Message":"task has failed."}},"Fail":{"Type":"Fail"}}}",
+            ],
+          ],
+        },
+        "LoggingConfiguration": {
+          "Destinations": [
+            {
+              "CloudWatchLogsLogGroup": {
+                "LogGroupArn": {
+                  "Fn::GetAtt": [
+                    "SchedulerLambdaWorkflowLogGroup38DE7869",
+                    "Arn",
+                  ],
+                },
+              },
+            },
+          ],
+          "Level": "ALL",
+        },
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "SchedulerLambdaWorkflowStateMachineRoleE7936EE1",
+            "Arn",
+          ],
+        },
+        "TracingConfiguration": {
+          "Enabled": true,
+        },
+      },
+      "Type": "AWS::StepFunctions::StateMachine",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "SchedulerLambdaWorkflowStateMachineEventsRole0E78A336": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "events.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "SchedulerLambdaWorkflowStateMachineEventsRoleDefaultPolicyF249E412": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "states:StartExecution",
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "SchedulerLambdaWorkflowStateMachineCBA0F67C",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "SchedulerLambdaWorkflowStateMachineEventsRoleDefaultPolicyF249E412",
+        "Roles": [
+          {
+            "Ref": "SchedulerLambdaWorkflowStateMachineEventsRole0E78A336",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "SchedulerLambdaWorkflowStateMachineRoleDefaultPolicy1D655EDF": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "dynamodb:PutItem",
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":dynamodb:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":table/",
+                    {
+                      "Ref": "SchedulerLambdaWorkflowTable9445E525",
+                    },
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "lambda:InvokeFunction",
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "TickerFunctions4DCC7C63",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "TickerFunctions4DCC7C63",
+                          "Arn",
+                        ],
+                      },
+                      ":*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": "sns:Publish",
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "SchedulerLambdaWorkflowTopicE6B123DB",
+              },
+            },
+            {
+              "Action": [
+                "logs:CreateLogDelivery",
+                "logs:GetLogDelivery",
+                "logs:UpdateLogDelivery",
+                "logs:DeleteLogDelivery",
+                "logs:ListLogDeliveries",
+                "logs:PutResourcePolicy",
+                "logs:DescribeResourcePolicies",
+                "logs:DescribeLogGroups",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "xray:PutTraceSegments",
+                "xray:PutTelemetryRecords",
+                "xray:GetSamplingRules",
+                "xray:GetSamplingTargets",
+              ],
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "SchedulerLambdaWorkflowStateMachineRoleDefaultPolicy1D655EDF",
+        "Roles": [
+          {
+            "Ref": "SchedulerLambdaWorkflowStateMachineRoleE7936EE1",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "SchedulerLambdaWorkflowStateMachineRoleE7936EE1": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": {
+                  "Fn::FindInMap": [
+                    "ServiceprincipalMap",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    "states",
+                  ],
+                },
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "SchedulerLambdaWorkflowTable9445E525": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "id",
+            "AttributeType": "S",
+          },
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "KeySchema": [
+          {
+            "AttributeName": "id",
+            "KeyType": "HASH",
+          },
+        ],
+        "SSESpecification": {
+          "SSEEnabled": true,
+        },
+      },
+      "Type": "AWS::DynamoDB::Table",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "SchedulerLambdaWorkflowTopicE6B123DB": {
+      "Type": "AWS::SNS::Topic",
+    },
+    "SchedulerRule0386C9FE": {
+      "Properties": {
+        "ScheduleExpression": "cron(0/5 * * * ? *)",
+        "State": "DISABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Ref": "SchedulerEcsWorkflowStateMachine56BA9AA6",
+            },
+            "Id": "Target0",
+            "RoleArn": {
+              "Fn::GetAtt": [
+                "SchedulerEcsWorkflowStateMachineEventsRole5EF68391",
+                "Arn",
+              ],
+            },
+          },
+        ],
+      },
+      "Type": "AWS::Events::Rule",
+    },
+    "SchedulerTaskSecurityGroup88DC2692": {
+      "Properties": {
+        "GroupDescription": "test/SchedulerTask/SecurityGroup",
+        "SecurityGroupEgress": [
+          {
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Allow all outbound traffic by default",
+            "IpProtocol": "-1",
+          },
+        ],
+        "VpcId": {
+          "Ref": "VPCB9E5F0B4",
+        },
+      },
+      "Type": "AWS::EC2::SecurityGroup",
+    },
+    "SfnQueue2Pipe64150CBE": {
+      "Properties": {
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "SfnQueue2PipeRole9B482D7C",
+            "Arn",
+          ],
+        },
+        "Source": {
+          "Fn::GetAtt": [
+            "SfnQueue2Queue969EFB50",
+            "Arn",
+          ],
+        },
+        "SourceParameters": {},
+        "Target": {
+          "Ref": "QueueLambdaWorkflowStateMachineFE9FE154",
+        },
+        "TargetParameters": {
+          "StepFunctionStateMachineParameters": {
+            "InvocationType": "FIRE_AND_FORGET",
+          },
+        },
+      },
+      "Type": "AWS::Pipes::Pipe",
+    },
+    "SfnQueue2PipeRole9B482D7C": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "pipes.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "SfnQueue2PipeRoleDefaultPolicy47641156": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:ChangeMessageVisibility",
+                "sqs:GetQueueUrl",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "SfnQueue2Queue969EFB50",
+                  "Arn",
+                ],
+              },
+            },
+            {
+              "Action": "states:StartExecution",
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "QueueLambdaWorkflowStateMachineFE9FE154",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "SfnQueue2PipeRoleDefaultPolicy47641156",
+        "Roles": [
+          {
+            "Ref": "SfnQueue2PipeRole9B482D7C",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "SfnQueue2Queue969EFB50": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "KmsMasterKeyId": "alias/aws/sqs",
+      },
+      "Type": "AWS::SQS::Queue",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "SfnQueue2QueuePolicyE4BDE41E": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sqs:*",
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false",
+                },
+              },
+              "Effect": "Deny",
+              "Principal": {
+                "AWS": "*",
+              },
+              "Resource": {
+                "Fn::GetAtt": [
+                  "SfnQueue2Queue969EFB50",
+                  "Arn",
+                ],
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "Queues": [
+          {
+            "Ref": "SfnQueue2Queue969EFB50",
+          },
+        ],
+      },
+      "Type": "AWS::SQS::QueuePolicy",
+    },
+    "TaskDefinitionB36D86D9": {
+      "Properties": {
+        "ContainerDefinitions": [
+          {
+            "Essential": true,
+            "Image": {
+              "Fn::Sub": "\${AWS::AccountId}.dkr.ecr.\${AWS::Region}.\${AWS::URLSuffix}/cdk-hnb659fds-container-assets-\${AWS::AccountId}-\${AWS::Region}:933643e5bfc1b699d99d97f5e801fed5be79b8dbe142da52f28037a658d2fe67",
+            },
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref": "TaskDefinitionTickerContainerLogGroupDF943DE4",
+                },
+                "awslogs-region": {
+                  "Ref": "AWS::Region",
+                },
+                "awslogs-stream-prefix": "TickerContainer",
+                "mode": "blocking",
+              },
+            },
+            "Name": "TickerContainer",
+          },
+        ],
+        "Cpu": "256",
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "TaskDefinitionExecutionRole8D61C2FB",
+            "Arn",
+          ],
+        },
+        "Family": "testTaskDefinitionDEFD2B54",
+        "Memory": "512",
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": [
+          "FARGATE",
+        ],
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "TaskDefinitionTaskRoleFD40A61D",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::ECS::TaskDefinition",
+    },
+    "TaskDefinitionExecutionRole8D61C2FB": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "TaskDefinitionExecutionRoleDefaultPolicy1F3406F5": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":ecr:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":repository/",
+                    {
+                      "Fn::Sub": "cdk-hnb659fds-container-assets-\${AWS::AccountId}-\${AWS::Region}",
+                    },
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "ecr:GetAuthorizationToken",
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "TaskDefinitionTickerContainerLogGroupDF943DE4",
+                  "Arn",
+                ],
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "TaskDefinitionExecutionRoleDefaultPolicy1F3406F5",
+        "Roles": [
+          {
+            "Ref": "TaskDefinitionExecutionRole8D61C2FB",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "TaskDefinitionTaskRoleFD40A61D": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "TaskDefinitionTickerContainerLogGroupDF943DE4": {
+      "DeletionPolicy": "Retain",
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Retain",
+    },
+    "TickerFunctions4DCC7C63": {
+      "DependsOn": [
+        "TickerFunctionsServiceRole3FE0457D",
       ],
       "Properties": {
         "Code": {
@@ -412,7 +2205,7 @@ exports[`Snapshot 1`] = `
         "PackageType": "Image",
         "Role": {
           "Fn::GetAtt": [
-            "InvokeTickerFunctionsServiceRole83BD0595",
+            "TickerFunctionsServiceRole3FE0457D",
             "Arn",
           ],
         },
@@ -420,7 +2213,7 @@ exports[`Snapshot 1`] = `
       },
       "Type": "AWS::Lambda::Function",
     },
-    "InvokeTickerFunctionsServiceRole83BD0595": {
+    "TickerFunctionsServiceRole3FE0457D": {
       "Properties": {
         "AssumeRolePolicyDocument": {
           "Statement": [
@@ -450,1571 +2243,6 @@ exports[`Snapshot 1`] = `
         ],
       },
       "Type": "AWS::IAM::Role",
-    },
-    "InvokeTickerMachineLogGroup50DD406E": {
-      "DeletionPolicy": "Delete",
-      "Properties": {
-        "RetentionInDays": 7,
-      },
-      "Type": "AWS::Logs::LogGroup",
-      "UpdateReplacePolicy": "Delete",
-    },
-    "QueueLogGroupB56391CE": {
-      "DeletionPolicy": "Delete",
-      "Properties": {
-        "RetentionInDays": 7,
-      },
-      "Type": "AWS::Logs::LogGroup",
-      "UpdateReplacePolicy": "Delete",
-    },
-    "QueueRunTaskSecurityGroup65DC821C": {
-      "Properties": {
-        "GroupDescription": "test/Queue/RunTask/SecurityGroup",
-        "SecurityGroupEgress": [
-          {
-            "CidrIp": "0.0.0.0/0",
-            "Description": "Allow all outbound traffic by default",
-            "IpProtocol": "-1",
-          },
-        ],
-        "VpcId": {
-          "Ref": "VPCB9E5F0B4",
-        },
-      },
-      "Type": "AWS::EC2::SecurityGroup",
-    },
-    "QueueStateMachineFA78A639": {
-      "DeletionPolicy": "Delete",
-      "DependsOn": [
-        "QueueStateMachineRoleDefaultPolicy7869B47C",
-        "QueueStateMachineRole417140D4",
-      ],
-      "Properties": {
-        "DefinitionString": {
-          "Fn::Join": [
-            "",
-            [
-              "{"StartAt":"PutItem","States":{"PutItem":{"Next":"RunTask","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
-              {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::dynamodb:putItem","Parameters":{"Item":{"id":{"S.$":"$[0].messageId"},"updatedAt":{"S.$":"$$.Execution.StartTime"}},"TableName":"",
-              {
-                "Ref": "QueueTableD6615DF4",
-              },
-              "","ConditionExpression":"attribute_not_exists(id)"}},"RunTask":{"Next":"Success","Retry":[{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","Resource":"arn:",
-              {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::ecs:runTask.sync","Parameters":{"Cluster":"",
-              {
-                "Fn::GetAtt": [
-                  "ClusterEB0386A7",
-                  "Arn",
-                ],
-              },
-              "","TaskDefinition":"testQueueTaskDefinitionCFDC26FE","NetworkConfiguration":{"AwsvpcConfiguration":{"Subnets":["",
-              {
-                "Ref": "VPCPrivateSubnet1Subnet8BCA10E0",
-              },
-              "","",
-              {
-                "Ref": "VPCPrivateSubnet2SubnetCFCDAA7A",
-              },
-              ""],"SecurityGroups":["",
-              {
-                "Fn::GetAtt": [
-                  "QueueRunTaskSecurityGroup65DC821C",
-                  "GroupId",
-                ],
-              },
-              ""]}},"Overrides":{"ContainerOverrides":[{"Name":"TickerContainer","Environment":[{"Name":"SFN_TASK_INPUT","Value.$":"States.JsonToString($)"}]}]},"LaunchType":"FARGATE","PlatformVersion":"LATEST"}},"Success":{"Type":"Succeed"},"Notify":{"Next":"Fail","Type":"Task","Resource":"arn:",
-              {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::sns:publish","Parameters":{"TopicArn":"",
-              {
-                "Ref": "QueueTopicEA80E302",
-              },
-              "","Message":"EcsRunTask has failed."}},"Fail":{"Type":"Fail"}}}",
-            ],
-          ],
-        },
-        "LoggingConfiguration": {
-          "Destinations": [
-            {
-              "CloudWatchLogsLogGroup": {
-                "LogGroupArn": {
-                  "Fn::GetAtt": [
-                    "QueueLogGroupB56391CE",
-                    "Arn",
-                  ],
-                },
-              },
-            },
-          ],
-          "Level": "ALL",
-        },
-        "RoleArn": {
-          "Fn::GetAtt": [
-            "QueueStateMachineRole417140D4",
-            "Arn",
-          ],
-        },
-        "TracingConfiguration": {
-          "Enabled": true,
-        },
-      },
-      "Type": "AWS::StepFunctions::StateMachine",
-      "UpdateReplacePolicy": "Delete",
-    },
-    "QueueStateMachineRole417140D4": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": {
-                  "Fn::FindInMap": [
-                    "ServiceprincipalMap",
-                    {
-                      "Ref": "AWS::Region",
-                    },
-                    "states",
-                  ],
-                },
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "QueueStateMachineRoleDefaultPolicy7869B47C": {
-      "Properties": {
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Action": "dynamodb:PutItem",
-              "Effect": "Allow",
-              "Resource": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "arn:",
-                    {
-                      "Ref": "AWS::Partition",
-                    },
-                    ":dynamodb:",
-                    {
-                      "Ref": "AWS::Region",
-                    },
-                    ":",
-                    {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":table/",
-                    {
-                      "Ref": "QueueTableD6615DF4",
-                    },
-                  ],
-                ],
-              },
-            },
-            {
-              "Action": "ecs:RunTask",
-              "Effect": "Allow",
-              "Resource": [
-                {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "arn:",
-                      {
-                        "Fn::Select": [
-                          1,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "QueueTaskDefinitionA40F35EE",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          2,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "QueueTaskDefinitionA40F35EE",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          3,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "QueueTaskDefinitionA40F35EE",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          4,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "QueueTaskDefinitionA40F35EE",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          0,
-                          {
-                            "Fn::Split": [
-                              "/",
-                              {
-                                "Fn::Select": [
-                                  5,
-                                  {
-                                    "Fn::Split": [
-                                      ":",
-                                      {
-                                        "Ref": "QueueTaskDefinitionA40F35EE",
-                                      },
-                                    ],
-                                  },
-                                ],
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      "/",
-                      {
-                        "Fn::Select": [
-                          1,
-                          {
-                            "Fn::Split": [
-                              "/",
-                              {
-                                "Fn::Select": [
-                                  5,
-                                  {
-                                    "Fn::Split": [
-                                      ":",
-                                      {
-                                        "Ref": "QueueTaskDefinitionA40F35EE",
-                                      },
-                                    ],
-                                  },
-                                ],
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                    ],
-                  ],
-                },
-                {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "arn:",
-                      {
-                        "Fn::Select": [
-                          1,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "QueueTaskDefinitionA40F35EE",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          2,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "QueueTaskDefinitionA40F35EE",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          3,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "QueueTaskDefinitionA40F35EE",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          4,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "QueueTaskDefinitionA40F35EE",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          0,
-                          {
-                            "Fn::Split": [
-                              "/",
-                              {
-                                "Fn::Select": [
-                                  5,
-                                  {
-                                    "Fn::Split": [
-                                      ":",
-                                      {
-                                        "Ref": "QueueTaskDefinitionA40F35EE",
-                                      },
-                                    ],
-                                  },
-                                ],
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      "/",
-                      {
-                        "Fn::Select": [
-                          1,
-                          {
-                            "Fn::Split": [
-                              "/",
-                              {
-                                "Fn::Select": [
-                                  5,
-                                  {
-                                    "Fn::Split": [
-                                      ":",
-                                      {
-                                        "Ref": "QueueTaskDefinitionA40F35EE",
-                                      },
-                                    ],
-                                  },
-                                ],
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":*",
-                    ],
-                  ],
-                },
-              ],
-            },
-            {
-              "Action": [
-                "ecs:StopTask",
-                "ecs:DescribeTasks",
-              ],
-              "Effect": "Allow",
-              "Resource": "*",
-            },
-            {
-              "Action": "iam:PassRole",
-              "Effect": "Allow",
-              "Resource": [
-                {
-                  "Fn::GetAtt": [
-                    "QueueTaskDefinitionTaskRole6319D29A",
-                    "Arn",
-                  ],
-                },
-                {
-                  "Fn::GetAtt": [
-                    "QueueTaskDefinitionExecutionRole91278581",
-                    "Arn",
-                  ],
-                },
-              ],
-            },
-            {
-              "Action": [
-                "events:PutTargets",
-                "events:PutRule",
-                "events:DescribeRule",
-              ],
-              "Effect": "Allow",
-              "Resource": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "arn:",
-                    {
-                      "Ref": "AWS::Partition",
-                    },
-                    ":events:",
-                    {
-                      "Ref": "AWS::Region",
-                    },
-                    ":",
-                    {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":rule/StepFunctionsGetEventsForECSTaskRule",
-                  ],
-                ],
-              },
-            },
-            {
-              "Action": "sns:Publish",
-              "Effect": "Allow",
-              "Resource": {
-                "Ref": "QueueTopicEA80E302",
-              },
-            },
-            {
-              "Action": [
-                "logs:CreateLogDelivery",
-                "logs:GetLogDelivery",
-                "logs:UpdateLogDelivery",
-                "logs:DeleteLogDelivery",
-                "logs:ListLogDeliveries",
-                "logs:PutResourcePolicy",
-                "logs:DescribeResourcePolicies",
-                "logs:DescribeLogGroups",
-              ],
-              "Effect": "Allow",
-              "Resource": "*",
-            },
-            {
-              "Action": [
-                "xray:PutTraceSegments",
-                "xray:PutTelemetryRecords",
-                "xray:GetSamplingRules",
-                "xray:GetSamplingTargets",
-              ],
-              "Effect": "Allow",
-              "Resource": "*",
-            },
-            {
-              "Action": "iam:PassRole",
-              "Condition": {
-                "StringLike": {
-                  "iam:PassedToService": "ecs-tasks.amazonaws.com",
-                },
-              },
-              "Effect": "Allow",
-              "Resource": [
-                {
-                  "Fn::GetAtt": [
-                    "QueueTaskDefinitionTaskRole6319D29A",
-                    "Arn",
-                  ],
-                },
-                {
-                  "Fn::GetAtt": [
-                    "QueueTaskDefinitionExecutionRole91278581",
-                    "Arn",
-                  ],
-                },
-              ],
-            },
-            {
-              "Action": "ecs:RunTask",
-              "Effect": "Allow",
-              "Resource": {
-                "Ref": "QueueTaskDefinitionA40F35EE",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "QueueStateMachineRoleDefaultPolicy7869B47C",
-        "Roles": [
-          {
-            "Ref": "QueueStateMachineRole417140D4",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
-    },
-    "QueueTableD6615DF4": {
-      "DeletionPolicy": "Delete",
-      "Properties": {
-        "AttributeDefinitions": [
-          {
-            "AttributeName": "id",
-            "AttributeType": "S",
-          },
-        ],
-        "BillingMode": "PAY_PER_REQUEST",
-        "KeySchema": [
-          {
-            "AttributeName": "id",
-            "KeyType": "HASH",
-          },
-        ],
-        "SSESpecification": {
-          "SSEEnabled": true,
-        },
-      },
-      "Type": "AWS::DynamoDB::Table",
-      "UpdateReplacePolicy": "Delete",
-    },
-    "QueueTaskDefinitionA40F35EE": {
-      "Properties": {
-        "ContainerDefinitions": [
-          {
-            "Essential": true,
-            "Image": {
-              "Fn::Sub": "\${AWS::AccountId}.dkr.ecr.\${AWS::Region}.\${AWS::URLSuffix}/cdk-hnb659fds-container-assets-\${AWS::AccountId}-\${AWS::Region}:933643e5bfc1b699d99d97f5e801fed5be79b8dbe142da52f28037a658d2fe67",
-            },
-            "LogConfiguration": {
-              "LogDriver": "awslogs",
-              "Options": {
-                "awslogs-group": {
-                  "Ref": "QueueTaskDefinitionTickerContainerLogGroup55D511E7",
-                },
-                "awslogs-region": {
-                  "Ref": "AWS::Region",
-                },
-                "awslogs-stream-prefix": "TickerContainer",
-                "mode": "blocking",
-              },
-            },
-            "Name": "TickerContainer",
-          },
-        ],
-        "Cpu": "256",
-        "ExecutionRoleArn": {
-          "Fn::GetAtt": [
-            "QueueTaskDefinitionExecutionRole91278581",
-            "Arn",
-          ],
-        },
-        "Family": "testQueueTaskDefinitionCFDC26FE",
-        "Memory": "512",
-        "NetworkMode": "awsvpc",
-        "RequiresCompatibilities": [
-          "FARGATE",
-        ],
-        "TaskRoleArn": {
-          "Fn::GetAtt": [
-            "QueueTaskDefinitionTaskRole6319D29A",
-            "Arn",
-          ],
-        },
-      },
-      "Type": "AWS::ECS::TaskDefinition",
-    },
-    "QueueTaskDefinitionExecutionRole91278581": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "ecs-tasks.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "QueueTaskDefinitionExecutionRoleDefaultPolicyF16FA271": {
-      "Properties": {
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Action": [
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-              ],
-              "Effect": "Allow",
-              "Resource": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "arn:",
-                    {
-                      "Ref": "AWS::Partition",
-                    },
-                    ":ecr:",
-                    {
-                      "Ref": "AWS::Region",
-                    },
-                    ":",
-                    {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":repository/",
-                    {
-                      "Fn::Sub": "cdk-hnb659fds-container-assets-\${AWS::AccountId}-\${AWS::Region}",
-                    },
-                  ],
-                ],
-              },
-            },
-            {
-              "Action": "ecr:GetAuthorizationToken",
-              "Effect": "Allow",
-              "Resource": "*",
-            },
-            {
-              "Action": [
-                "logs:CreateLogStream",
-                "logs:PutLogEvents",
-              ],
-              "Effect": "Allow",
-              "Resource": {
-                "Fn::GetAtt": [
-                  "QueueTaskDefinitionTickerContainerLogGroup55D511E7",
-                  "Arn",
-                ],
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "QueueTaskDefinitionExecutionRoleDefaultPolicyF16FA271",
-        "Roles": [
-          {
-            "Ref": "QueueTaskDefinitionExecutionRole91278581",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
-    },
-    "QueueTaskDefinitionTaskRole6319D29A": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "ecs-tasks.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "QueueTaskDefinitionTickerContainerLogGroup55D511E7": {
-      "DeletionPolicy": "Retain",
-      "Type": "AWS::Logs::LogGroup",
-      "UpdateReplacePolicy": "Retain",
-    },
-    "QueueTopicEA80E302": {
-      "Type": "AWS::SNS::Topic",
-    },
-    "RunTaskLogGroup6F4E0464": {
-      "DeletionPolicy": "Delete",
-      "Properties": {
-        "RetentionInDays": 7,
-      },
-      "Type": "AWS::Logs::LogGroup",
-      "UpdateReplacePolicy": "Delete",
-    },
-    "RunTaskSecurityGroupB9B5D405": {
-      "Properties": {
-        "GroupDescription": "test/RunTask/RunTask/SecurityGroup",
-        "SecurityGroupEgress": [
-          {
-            "CidrIp": "0.0.0.0/0",
-            "Description": "Allow all outbound traffic by default",
-            "IpProtocol": "-1",
-          },
-        ],
-        "VpcId": {
-          "Ref": "VPCB9E5F0B4",
-        },
-      },
-      "Type": "AWS::EC2::SecurityGroup",
-    },
-    "RunTaskStateMachine4F0C783C": {
-      "DeletionPolicy": "Delete",
-      "DependsOn": [
-        "RunTaskStateMachineRoleDefaultPolicy77E07AC0",
-        "RunTaskStateMachineRole6F1BA3C1",
-      ],
-      "Properties": {
-        "DefinitionString": {
-          "Fn::Join": [
-            "",
-            [
-              "{"StartAt":"PutItem","States":{"PutItem":{"Next":"RunTask","Catch":[{"ErrorEquals":["States.ALL"],"Next":"Fail"}],"Type":"Task","ResultPath":null,"Resource":"arn:",
-              {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::dynamodb:putItem","Parameters":{"Item":{"id":{"S.$":"$.id"},"updatedAt":{"S.$":"$$.Execution.StartTime"}},"TableName":"",
-              {
-                "Ref": "RunTaskTable2189D5BB",
-              },
-              "","ConditionExpression":"attribute_not_exists(id)"}},"RunTask":{"Next":"Success","Retry":[{"ErrorEquals":["States.ALL"],"IntervalSeconds":10,"MaxAttempts":5,"BackoffRate":1}],"Catch":[{"ErrorEquals":["States.ALL"],"ResultPath":"$.error","Next":"Notify"}],"Type":"Task","Resource":"arn:",
-              {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::ecs:runTask.sync","Parameters":{"Cluster":"",
-              {
-                "Fn::GetAtt": [
-                  "ClusterEB0386A7",
-                  "Arn",
-                ],
-              },
-              "","TaskDefinition":"testRunTaskTaskDefinitionFAEE2E2E","NetworkConfiguration":{"AwsvpcConfiguration":{"Subnets":["",
-              {
-                "Ref": "VPCPrivateSubnet1Subnet8BCA10E0",
-              },
-              "","",
-              {
-                "Ref": "VPCPrivateSubnet2SubnetCFCDAA7A",
-              },
-              ""],"SecurityGroups":["",
-              {
-                "Fn::GetAtt": [
-                  "RunTaskSecurityGroupB9B5D405",
-                  "GroupId",
-                ],
-              },
-              ""]}},"Overrides":{"ContainerOverrides":[{"Name":"TickerContainer","Environment":[{"Name":"SFN_TASK_INPUT","Value.$":"States.JsonToString($)"}]}]},"LaunchType":"FARGATE","PlatformVersion":"LATEST"}},"Success":{"Type":"Succeed"},"Notify":{"Next":"Fail","Type":"Task","Resource":"arn:",
-              {
-                "Ref": "AWS::Partition",
-              },
-              ":states:::sns:publish","Parameters":{"TopicArn":"",
-              {
-                "Ref": "RunTaskTopic7525466B",
-              },
-              "","Message":"EcsRunTask has failed."}},"Fail":{"Type":"Fail"}}}",
-            ],
-          ],
-        },
-        "LoggingConfiguration": {
-          "Destinations": [
-            {
-              "CloudWatchLogsLogGroup": {
-                "LogGroupArn": {
-                  "Fn::GetAtt": [
-                    "RunTaskLogGroup6F4E0464",
-                    "Arn",
-                  ],
-                },
-              },
-            },
-          ],
-          "Level": "ALL",
-        },
-        "RoleArn": {
-          "Fn::GetAtt": [
-            "RunTaskStateMachineRole6F1BA3C1",
-            "Arn",
-          ],
-        },
-        "TracingConfiguration": {
-          "Enabled": true,
-        },
-      },
-      "Type": "AWS::StepFunctions::StateMachine",
-      "UpdateReplacePolicy": "Delete",
-    },
-    "RunTaskStateMachineEventsRole404AAB78": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "events.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "RunTaskStateMachineEventsRoleDefaultPolicyD918F388": {
-      "Properties": {
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Action": "states:StartExecution",
-              "Effect": "Allow",
-              "Resource": {
-                "Ref": "RunTaskStateMachine4F0C783C",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "RunTaskStateMachineEventsRoleDefaultPolicyD918F388",
-        "Roles": [
-          {
-            "Ref": "RunTaskStateMachineEventsRole404AAB78",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
-    },
-    "RunTaskStateMachineRole6F1BA3C1": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": {
-                  "Fn::FindInMap": [
-                    "ServiceprincipalMap",
-                    {
-                      "Ref": "AWS::Region",
-                    },
-                    "states",
-                  ],
-                },
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "RunTaskStateMachineRoleDefaultPolicy77E07AC0": {
-      "Properties": {
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Action": "dynamodb:PutItem",
-              "Effect": "Allow",
-              "Resource": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "arn:",
-                    {
-                      "Ref": "AWS::Partition",
-                    },
-                    ":dynamodb:",
-                    {
-                      "Ref": "AWS::Region",
-                    },
-                    ":",
-                    {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":table/",
-                    {
-                      "Ref": "RunTaskTable2189D5BB",
-                    },
-                  ],
-                ],
-              },
-            },
-            {
-              "Action": "ecs:RunTask",
-              "Effect": "Allow",
-              "Resource": [
-                {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "arn:",
-                      {
-                        "Fn::Select": [
-                          1,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "RunTaskTaskDefinition1482791E",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          2,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "RunTaskTaskDefinition1482791E",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          3,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "RunTaskTaskDefinition1482791E",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          4,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "RunTaskTaskDefinition1482791E",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          0,
-                          {
-                            "Fn::Split": [
-                              "/",
-                              {
-                                "Fn::Select": [
-                                  5,
-                                  {
-                                    "Fn::Split": [
-                                      ":",
-                                      {
-                                        "Ref": "RunTaskTaskDefinition1482791E",
-                                      },
-                                    ],
-                                  },
-                                ],
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      "/",
-                      {
-                        "Fn::Select": [
-                          1,
-                          {
-                            "Fn::Split": [
-                              "/",
-                              {
-                                "Fn::Select": [
-                                  5,
-                                  {
-                                    "Fn::Split": [
-                                      ":",
-                                      {
-                                        "Ref": "RunTaskTaskDefinition1482791E",
-                                      },
-                                    ],
-                                  },
-                                ],
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                    ],
-                  ],
-                },
-                {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "arn:",
-                      {
-                        "Fn::Select": [
-                          1,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "RunTaskTaskDefinition1482791E",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          2,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "RunTaskTaskDefinition1482791E",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          3,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "RunTaskTaskDefinition1482791E",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          4,
-                          {
-                            "Fn::Split": [
-                              ":",
-                              {
-                                "Ref": "RunTaskTaskDefinition1482791E",
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":",
-                      {
-                        "Fn::Select": [
-                          0,
-                          {
-                            "Fn::Split": [
-                              "/",
-                              {
-                                "Fn::Select": [
-                                  5,
-                                  {
-                                    "Fn::Split": [
-                                      ":",
-                                      {
-                                        "Ref": "RunTaskTaskDefinition1482791E",
-                                      },
-                                    ],
-                                  },
-                                ],
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      "/",
-                      {
-                        "Fn::Select": [
-                          1,
-                          {
-                            "Fn::Split": [
-                              "/",
-                              {
-                                "Fn::Select": [
-                                  5,
-                                  {
-                                    "Fn::Split": [
-                                      ":",
-                                      {
-                                        "Ref": "RunTaskTaskDefinition1482791E",
-                                      },
-                                    ],
-                                  },
-                                ],
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      ":*",
-                    ],
-                  ],
-                },
-              ],
-            },
-            {
-              "Action": [
-                "ecs:StopTask",
-                "ecs:DescribeTasks",
-              ],
-              "Effect": "Allow",
-              "Resource": "*",
-            },
-            {
-              "Action": "iam:PassRole",
-              "Effect": "Allow",
-              "Resource": [
-                {
-                  "Fn::GetAtt": [
-                    "RunTaskTaskDefinitionTaskRoleC30330C8",
-                    "Arn",
-                  ],
-                },
-                {
-                  "Fn::GetAtt": [
-                    "RunTaskTaskDefinitionExecutionRole8B2E3828",
-                    "Arn",
-                  ],
-                },
-              ],
-            },
-            {
-              "Action": [
-                "events:PutTargets",
-                "events:PutRule",
-                "events:DescribeRule",
-              ],
-              "Effect": "Allow",
-              "Resource": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "arn:",
-                    {
-                      "Ref": "AWS::Partition",
-                    },
-                    ":events:",
-                    {
-                      "Ref": "AWS::Region",
-                    },
-                    ":",
-                    {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":rule/StepFunctionsGetEventsForECSTaskRule",
-                  ],
-                ],
-              },
-            },
-            {
-              "Action": "sns:Publish",
-              "Effect": "Allow",
-              "Resource": {
-                "Ref": "RunTaskTopic7525466B",
-              },
-            },
-            {
-              "Action": [
-                "logs:CreateLogDelivery",
-                "logs:GetLogDelivery",
-                "logs:UpdateLogDelivery",
-                "logs:DeleteLogDelivery",
-                "logs:ListLogDeliveries",
-                "logs:PutResourcePolicy",
-                "logs:DescribeResourcePolicies",
-                "logs:DescribeLogGroups",
-              ],
-              "Effect": "Allow",
-              "Resource": "*",
-            },
-            {
-              "Action": [
-                "xray:PutTraceSegments",
-                "xray:PutTelemetryRecords",
-                "xray:GetSamplingRules",
-                "xray:GetSamplingTargets",
-              ],
-              "Effect": "Allow",
-              "Resource": "*",
-            },
-            {
-              "Action": "iam:PassRole",
-              "Condition": {
-                "StringLike": {
-                  "iam:PassedToService": "ecs-tasks.amazonaws.com",
-                },
-              },
-              "Effect": "Allow",
-              "Resource": [
-                {
-                  "Fn::GetAtt": [
-                    "RunTaskTaskDefinitionTaskRoleC30330C8",
-                    "Arn",
-                  ],
-                },
-                {
-                  "Fn::GetAtt": [
-                    "RunTaskTaskDefinitionExecutionRole8B2E3828",
-                    "Arn",
-                  ],
-                },
-              ],
-            },
-            {
-              "Action": "ecs:RunTask",
-              "Effect": "Allow",
-              "Resource": {
-                "Ref": "RunTaskTaskDefinition1482791E",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "RunTaskStateMachineRoleDefaultPolicy77E07AC0",
-        "Roles": [
-          {
-            "Ref": "RunTaskStateMachineRole6F1BA3C1",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
-    },
-    "RunTaskTable2189D5BB": {
-      "DeletionPolicy": "Delete",
-      "Properties": {
-        "AttributeDefinitions": [
-          {
-            "AttributeName": "id",
-            "AttributeType": "S",
-          },
-        ],
-        "BillingMode": "PAY_PER_REQUEST",
-        "KeySchema": [
-          {
-            "AttributeName": "id",
-            "KeyType": "HASH",
-          },
-        ],
-        "SSESpecification": {
-          "SSEEnabled": true,
-        },
-      },
-      "Type": "AWS::DynamoDB::Table",
-      "UpdateReplacePolicy": "Delete",
-    },
-    "RunTaskTaskDefinition1482791E": {
-      "Properties": {
-        "ContainerDefinitions": [
-          {
-            "Essential": true,
-            "Image": {
-              "Fn::Sub": "\${AWS::AccountId}.dkr.ecr.\${AWS::Region}.\${AWS::URLSuffix}/cdk-hnb659fds-container-assets-\${AWS::AccountId}-\${AWS::Region}:933643e5bfc1b699d99d97f5e801fed5be79b8dbe142da52f28037a658d2fe67",
-            },
-            "LogConfiguration": {
-              "LogDriver": "awslogs",
-              "Options": {
-                "awslogs-group": {
-                  "Ref": "RunTaskTaskDefinitionTickerContainerLogGroup8116814D",
-                },
-                "awslogs-region": {
-                  "Ref": "AWS::Region",
-                },
-                "awslogs-stream-prefix": "TickerContainer",
-                "mode": "blocking",
-              },
-            },
-            "Name": "TickerContainer",
-          },
-        ],
-        "Cpu": "256",
-        "ExecutionRoleArn": {
-          "Fn::GetAtt": [
-            "RunTaskTaskDefinitionExecutionRole8B2E3828",
-            "Arn",
-          ],
-        },
-        "Family": "testRunTaskTaskDefinitionFAEE2E2E",
-        "Memory": "512",
-        "NetworkMode": "awsvpc",
-        "RequiresCompatibilities": [
-          "FARGATE",
-        ],
-        "TaskRoleArn": {
-          "Fn::GetAtt": [
-            "RunTaskTaskDefinitionTaskRoleC30330C8",
-            "Arn",
-          ],
-        },
-      },
-      "Type": "AWS::ECS::TaskDefinition",
-    },
-    "RunTaskTaskDefinitionExecutionRole8B2E3828": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "ecs-tasks.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "RunTaskTaskDefinitionExecutionRoleDefaultPolicy7AFDD965": {
-      "Properties": {
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Action": [
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-              ],
-              "Effect": "Allow",
-              "Resource": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "arn:",
-                    {
-                      "Ref": "AWS::Partition",
-                    },
-                    ":ecr:",
-                    {
-                      "Ref": "AWS::Region",
-                    },
-                    ":",
-                    {
-                      "Ref": "AWS::AccountId",
-                    },
-                    ":repository/",
-                    {
-                      "Fn::Sub": "cdk-hnb659fds-container-assets-\${AWS::AccountId}-\${AWS::Region}",
-                    },
-                  ],
-                ],
-              },
-            },
-            {
-              "Action": "ecr:GetAuthorizationToken",
-              "Effect": "Allow",
-              "Resource": "*",
-            },
-            {
-              "Action": [
-                "logs:CreateLogStream",
-                "logs:PutLogEvents",
-              ],
-              "Effect": "Allow",
-              "Resource": {
-                "Fn::GetAtt": [
-                  "RunTaskTaskDefinitionTickerContainerLogGroup8116814D",
-                  "Arn",
-                ],
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "RunTaskTaskDefinitionExecutionRoleDefaultPolicy7AFDD965",
-        "Roles": [
-          {
-            "Ref": "RunTaskTaskDefinitionExecutionRole8B2E3828",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
-    },
-    "RunTaskTaskDefinitionTaskRoleC30330C8": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "ecs-tasks.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "RunTaskTaskDefinitionTickerContainerLogGroup8116814D": {
-      "DeletionPolicy": "Retain",
-      "Type": "AWS::Logs::LogGroup",
-      "UpdateReplacePolicy": "Retain",
-    },
-    "RunTaskTopic7525466B": {
-      "Type": "AWS::SNS::Topic",
-    },
-    "SfnQueueDEC51299": {
-      "DeletionPolicy": "Delete",
-      "Properties": {
-        "KmsMasterKeyId": "alias/aws/sqs",
-      },
-      "Type": "AWS::SQS::Queue",
-      "UpdateReplacePolicy": "Delete",
-    },
-    "SfnQueuePipe3EA1A0A5": {
-      "Properties": {
-        "RoleArn": {
-          "Fn::GetAtt": [
-            "SfnQueuePipeRoleA8E9A522",
-            "Arn",
-          ],
-        },
-        "Source": {
-          "Fn::GetAtt": [
-            "SfnQueueDEC51299",
-            "Arn",
-          ],
-        },
-        "SourceParameters": {},
-        "Target": {
-          "Ref": "QueueStateMachineFA78A639",
-        },
-        "TargetParameters": {
-          "StepFunctionStateMachineParameters": {
-            "InvocationType": "FIRE_AND_FORGET",
-          },
-        },
-      },
-      "Type": "AWS::Pipes::Pipe",
-    },
-    "SfnQueuePipeRoleA8E9A522": {
-      "Properties": {
-        "AssumeRolePolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sts:AssumeRole",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "pipes.amazonaws.com",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-      },
-      "Type": "AWS::IAM::Role",
-    },
-    "SfnQueuePipeRoleDefaultPolicy3EF91053": {
-      "Properties": {
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Action": [
-                "sqs:ReceiveMessage",
-                "sqs:ChangeMessageVisibility",
-                "sqs:GetQueueUrl",
-                "sqs:DeleteMessage",
-                "sqs:GetQueueAttributes",
-              ],
-              "Effect": "Allow",
-              "Resource": {
-                "Fn::GetAtt": [
-                  "SfnQueueDEC51299",
-                  "Arn",
-                ],
-              },
-            },
-            {
-              "Action": "states:StartExecution",
-              "Effect": "Allow",
-              "Resource": {
-                "Ref": "QueueStateMachineFA78A639",
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "PolicyName": "SfnQueuePipeRoleDefaultPolicy3EF91053",
-        "Roles": [
-          {
-            "Ref": "SfnQueuePipeRoleA8E9A522",
-          },
-        ],
-      },
-      "Type": "AWS::IAM::Policy",
-    },
-    "SfnQueuePolicy99EB16DB": {
-      "Properties": {
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Action": "sqs:*",
-              "Condition": {
-                "Bool": {
-                  "aws:SecureTransport": "false",
-                },
-              },
-              "Effect": "Deny",
-              "Principal": {
-                "AWS": "*",
-              },
-              "Resource": {
-                "Fn::GetAtt": [
-                  "SfnQueueDEC51299",
-                  "Arn",
-                ],
-              },
-            },
-          ],
-          "Version": "2012-10-17",
-        },
-        "Queues": [
-          {
-            "Ref": "SfnQueueDEC51299",
-          },
-        ],
-      },
-      "Type": "AWS::SQS::QueuePolicy",
     },
     "VPCB9E5F0B4": {
       "Properties": {
