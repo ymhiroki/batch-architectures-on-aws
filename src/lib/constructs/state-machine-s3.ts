@@ -62,3 +62,35 @@ export class StateMachineS3 extends Construct {
     });
   }
 }
+
+/**
+ * イベントの例
+{
+  "version": "0",
+  "id": "41ede7cf-b3be-4f4f-339d-0acec339f042",
+  "detail-type": "Object Created",
+  "source": "aws.s3",
+  "account": "123456789012",
+  "time": "2024-07-11T04:12:29Z",
+  "region": "us-east-1",
+  "resources": [
+    "arn:aws:s3:::bucket-name"
+  ],
+  "detail": {
+    "version": "0",
+    "bucket": {
+      "name": "bucket-name"
+    },
+    "object": {
+      "key": "20240711_131227_test.txt",
+      "size": 24,
+      "etag": "dd4feeb772c1e06040ae6429f48b7cb1",
+      "sequencer": "00668F5BAD4281536F"
+    },
+    "request-id": "G02D84PCS169V58P",
+    "requester": "123456789012",
+    "source-ip-address": "49.97.99.239",
+    "reason": "PutObject"
+  }
+}
+ */
