@@ -4,7 +4,7 @@ import * as pipes from '@aws-cdk/aws-pipes-alpha';
 import * as sources from '@aws-cdk/aws-pipes-sources-alpha';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import * as targets from '@aws-cdk/aws-pipes-targets-alpha';
-import { CfnOutput } from 'aws-cdk-lib';
+import { CfnOutput, RemovalPolicy } from 'aws-cdk-lib';
 // import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
@@ -12,6 +12,7 @@ import { Construct } from 'constructs';
 
 export interface StateMachineQueueProps {
   readonly stateMachine: sfn.IStateMachine;
+  readonly queue?: sqs.IQueue;
 }
 
 /**
@@ -27,10 +28,13 @@ export class StateMachineQueue extends Construct {
       invocationType: targets.StateMachineInvocationType.FIRE_AND_FORGET,
     });
 
-    const queue = new sqs.Queue(this, 'Queue', {
-      encryption: sqs.QueueEncryption.KMS_MANAGED,
-      enforceSSL: true,
-    });
+    const queue =
+      props.queue ??
+      new sqs.Queue(this, 'Queue', {
+        encryption: sqs.QueueEncryption.KMS_MANAGED,
+        enforceSSL: true,
+        removalPolicy: RemovalPolicy.DESTROY,
+      });
 
     const pipeSource = new sources.SqsSource(queue);
     new pipes.Pipe(this, 'Pipe', {

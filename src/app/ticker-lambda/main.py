@@ -8,6 +8,9 @@ logger.setLevel(logging.INFO)
 
 
 def lambda_handler(event, context):
+    # event の内容をログ出力する
+    logger.info(f"Event: {event}")
+
     start_time = time.time()
     end_time = start_time + 60  # 1分間実行
 

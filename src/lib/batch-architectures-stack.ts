@@ -13,6 +13,7 @@ import { Construct } from 'constructs';
 // import { InvokeFunctionStateMachine } from './constructs/invoke-function-state-machine';
 import { BatchProcessingWorkflow } from './constructs/batch-processing-workflow';
 import { StateMachineQueue } from './constructs/state-machine-queue';
+import { StateMachineS3 } from './constructs/state-machine-s3';
 import { StateMachineScheduler } from './constructs/state-machine-scheduler';
 
 export interface BatchArchitecturesStackProps extends cdk.StackProps {
@@ -33,17 +34,6 @@ export interface BatchArchitecturesStackProps extends cdk.StackProps {
 export class BatchArchitecturesStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: BatchArchitecturesStackProps = {}) {
     super(scope, id, props);
-
-    NagSuppressions.addStackSuppressions(this, [
-      {
-        id: 'AwsSolutions-IAM4',
-        reason: 'default iam policy',
-      },
-      {
-        id: 'AwsSolutions-IAM5',
-        reason: 'default iam policy',
-      },
-    ]);
 
     const vpc =
       props.vpc ??
@@ -159,7 +149,7 @@ export class BatchArchitecturesStack extends cdk.Stack {
       scheduleEnabled,
     });
 
-    // Patter 2-2: SQS -> EventBridge Pipes -> StepFunctions { -> InvokeLambda }
+    // Pattern 2-2: SQS -> EventBridge Pipes -> StepFunctions { -> InvokeLambda }
     new StateMachineQueue(this, 'SfnQueue2', {
       stateMachine: new BatchProcessingWorkflow(this, 'QueueLambdaWorkflow', {
         task: new tasks.LambdaInvoke(this, 'QueueFunction', {
@@ -170,5 +160,54 @@ export class BatchArchitecturesStack extends cdk.Stack {
         mutexKeyExpression: '$[0].messageId',
       }).stateMachine,
     });
+
+    // Pattern 3-2: S4 Bucket -> EventBridge -> StepFunctions { -> InvokeLambda }
+    new StateMachineS3(this, 'SfnBucket', {
+      stateMachine: new BatchProcessingWorkflow(this, 'BucketLambdaWorkflow', {
+        task: new tasks.LambdaInvoke(this, 'BucketFunction', {
+          lambdaFunction: tickerFunction,
+          payloadResponseOnly: true,
+          taskTimeout,
+        }),
+      }).stateMachine,
+    });
+
+    /**
+     * pdg-nag suppressions
+     */
+    NagSuppressions.addStackSuppressions(this, [
+      {
+        id: 'AwsSolutions-IAM4',
+        reason: 'default iam policy',
+      },
+      {
+        id: 'AwsSolutions-IAM5',
+        reason: 'default iam policy',
+      },
+      {
+        id: 'AwsSolutions-SNS2',
+        reason: 'no key is prepared',
+      },
+      {
+        id: 'AwsSolutions-SNS3',
+        reason: 'no key is prepared',
+      },
+      {
+        id: 'AwsSolutions-SQS3',
+        reason: 'dlq is not mandatory here',
+      },
+      {
+        id: 'AwsSolutions-DDB3',
+        reason: 'PITR is not mandatory here',
+      },
+      {
+        id: 'AwsSolutions-VPC7',
+        reason: 'flowlogs is not used here',
+      },
+      {
+        id: 'AwsSolutions-S1',
+        reason: 'access log is disabled here',
+      },
+    ]);
   }
 }

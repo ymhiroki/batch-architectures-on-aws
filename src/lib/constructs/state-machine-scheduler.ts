@@ -1,5 +1,7 @@
+import { RemovalPolicy } from 'aws-cdk-lib';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import { Construct } from 'constructs';
 
@@ -25,6 +27,14 @@ export class StateMachineScheduler extends Construct {
       enabled: scheduleEnabled,
     });
 
-    rule.addTarget(new targets.SfnStateMachine(stateMachine));
+    const dlq = new sqs.Queue(this, 'Dlq', {
+      encryption: sqs.QueueEncryption.KMS_MANAGED,
+      enforceSSL: true,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
+    rule.addTarget(new targets.SfnStateMachine(stateMachine, {
+      deadLetterQueue: dlq,
+    }));
   }
 }
