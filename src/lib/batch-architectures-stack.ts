@@ -13,7 +13,6 @@ import { Construct } from 'constructs';
 // import { InvokeFunctionStateMachine } from './constructs/invoke-function-state-machine';
 import { BatchProcessingWorkflow } from './constructs/batch-processing-workflow';
 import { StateMachineQueue } from './constructs/state-machine-queue';
-import { StateMachineS3 } from './constructs/state-machine-s3';
 import { StateMachineScheduler } from './constructs/state-machine-scheduler';
 
 export interface BatchArchitecturesStackProps extends cdk.StackProps {
@@ -158,17 +157,6 @@ export class BatchArchitecturesStack extends cdk.Stack {
           taskTimeout,
         }),
         mutexKeyExpression: '$[0].messageId',
-      }).stateMachine,
-    });
-
-    // Pattern 3-2: S4 Bucket -> EventBridge -> StepFunctions { -> InvokeLambda }
-    new StateMachineS3(this, 'SfnBucket', {
-      stateMachine: new BatchProcessingWorkflow(this, 'BucketLambdaWorkflow', {
-        task: new tasks.LambdaInvoke(this, 'BucketFunction', {
-          lambdaFunction: tickerFunction,
-          payloadResponseOnly: true,
-          taskTimeout,
-        }),
       }).stateMachine,
     });
 
